@@ -106,4 +106,3 @@ Ordered by impact-for-effort:
 3. **Employer self-service** — companies currently submit "blind"; they can't edit a posting or view applicants without an admin. This is the biggest functional gap and needs a new authenticated role.
 4. **Job-seeker accounts** — would make saved jobs/alerts persistent across devices and add an application history. Optional for a curated board.
 5. **Applicant pipeline** — the `applicants` table is currently a flat list; statuses (new/reviewed/shortlisted), notes, and CSV export would make it a real hiring tool.
-6. **Repo hygiene** — stale duplicate SQL files (`database.sql` and `migration_arabic.sql` at the repo root, and `config/kastana_jobs.sql`) predate the canonical `config/database.sql`. They're excluded from version control via `.gitignore` but still sit on disk; delete them once you're sure nothing local depends on them.
