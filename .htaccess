@@ -1,0 +1,42 @@
+# ============================================================
+#  Kastana Jobs — Apache security rules
+# ============================================================
+
+# Disable directory browsing
+Options -Indexes
+
+# Use index.php as the default document
+DirectoryIndex index.php
+
+# ---- Block access to sensitive files ----
+<FilesMatch "\.(sql|md|log|ini|dist|sh|json|lock)$">
+    Require all denied
+</FilesMatch>
+
+# Block dotfiles (.htaccess, .env, .git, etc.)
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# ---- Security headers (fallback; PHP also sets these) ----
+<IfModule mod_headers.c>
+    Header always set X-Frame-Options "DENY"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    # Do not leak the PHP version
+    Header always unset X-Powered-By
+    Header unset X-Powered-By
+</IfModule>
+
+# Hide PHP signature
+<IfModule mod_php.c>
+    php_flag expose_php off
+</IfModule>
+
+# ---- Custom error pages fall back to the app ----
+ErrorDocument 403 /kastana-jobs/index.php
+ErrorDocument 404 /kastana-jobs/index.php
+
+# ---- Force UTF-8 ----
+AddDefaultCharset UTF-8

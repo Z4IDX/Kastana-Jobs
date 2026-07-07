@@ -1,0 +1,9 @@
+# Normalize line endings so the repo is consistent across OSes.
+* text=auto
+
+# Treat binary assets as binary (no EOL conversion).
+*.png binary
+*.jpg binary
+*.gif binary
+*.webp binary
+*.ico binary

@@ -1,0 +1,23 @@
+# --- Uploaded files (runtime data, not source) ---
+# Keep the folder and its security guards, ignore everything users upload.
+/uploads/*
+!/uploads/.htaccess
+!/uploads/index.html
+
+# --- Local / editor / OS noise ---
+.vscode/
+.idea/
+*.log
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# --- Local overrides ---
+# If you split real credentials out of config.php, keep them out of git.
+config/config.local.php
+
+# --- Stale / duplicate schema files (canonical schema is config/database.sql) ---
+# Kept on disk for now but excluded from version control; safe to delete.
+/database.sql
+/migration_arabic.sql
+/config/kastana_jobs.sql
