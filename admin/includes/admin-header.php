@@ -21,7 +21,9 @@ require_login(); // every admin page is guarded
     <a href="<?= url('admin/dashboard.php') ?>" class="admin-brand"><?= e(APP_NAME) ?><span class="dot">.</span>Admin</a>
     <div class="admin-bar__right">
       <span class="who"><?= e($_SESSION['admin_username'] ?? '') ?></span>
-      <a href="<?= url('admin/categories.php') ?>" class="linkout">Categories</a>
+      <?php if (current_admin_role() === 'super_admin'): ?>
+        <a href="<?= url('admin/categories.php') ?>" class="linkout">Categories</a>
+      <?php endif; ?>
       <a href="<?= url('admin/activity-log.php') ?>" class="linkout">Activity log</a>
       <a href="<?= url('admin/account.php') ?>" class="linkout">Account</a>
       <a href="<?= url('index.php') ?>" target="_blank" class="linkout">View site ↗</a>

@@ -18,8 +18,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $username = input($_POST, 'username');
         $password = (string) ($_POST['password'] ?? '');
 
-        $stmt = db()->prepare('SELECT * FROM admins WHERE username = ? LIMIT 1');
-        $stmt->execute([$username]);
+        // Authenticate in the current context: the platform owner (super-admin,
+        // no tenant) in the super-admin zone, else this subdomain's company admin.
+        if (is_super_admin_zone()) {
+            $stmt = db()->prepare("SELECT * FROM admins WHERE username = ? AND role = 'super_admin' AND tenant_id IS NULL LIMIT 1");
+            $stmt->execute([$username]);
+        } else {
+            $stmt = db()->prepare("SELECT * FROM admins WHERE username = ? AND role = 'company_admin' AND tenant_id = ? LIMIT 1");
+            $stmt->execute([$username, current_tenant_id()]);
+        }
         $admin = $stmt->fetch();
 
         // password_verify is constant-time; we always run it to avoid timing leaks.

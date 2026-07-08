@@ -114,15 +114,45 @@ function require_login(): void
     if (!is_logged_in()) {
         redirect('admin/login.php');
     }
+
+    // Tenant-context enforcement: a company admin's session is only valid on
+    // its own subdomain; a super-admin's only in the super-admin zone. This
+    // stops a session from being replayed in the wrong context.
+    $role = $_SESSION['admin_role'] ?? 'company_admin';
+    $ok = ($role === 'super_admin')
+        ? is_super_admin_zone()
+        : (!is_super_admin_zone() && (int) ($_SESSION['admin_tenant_id'] ?? 0) === current_tenant_id());
+    if (!$ok) {
+        logout_admin();
+        flash_set('error', 'Please sign in for this site.');
+        redirect('admin/login.php');
+    }
+}
+
+/** Guard for platform-owner-only pages. */
+function require_super_admin(): void
+{
+    require_login();
+    if (($_SESSION['admin_role'] ?? '') !== 'super_admin') {
+        http_response_code(403);
+        exit('Forbidden.');
+    }
+}
+
+function current_admin_role(): string
+{
+    return (string) ($_SESSION['admin_role'] ?? 'company_admin');
 }
 
 function login_admin(array $admin): void
 {
     // Prevent session fixation — new ID on privilege change.
     session_regenerate_id(true);
-    $_SESSION['admin_id']      = (int) $admin['id'];
-    $_SESSION['admin_username'] = $admin['username'];
-    $_SESSION['last_activity'] = time();
+    $_SESSION['admin_id']        = (int) $admin['id'];
+    $_SESSION['admin_username']  = $admin['username'];
+    $_SESSION['admin_role']      = $admin['role'] ?? 'company_admin';
+    $_SESSION['admin_tenant_id'] = isset($admin['tenant_id']) ? (int) $admin['tenant_id'] : null;
+    $_SESSION['last_activity']   = time();
 }
 
 function logout_admin(): void
@@ -231,6 +261,17 @@ function is_platform_context(): bool
     return $host === $base || $host === 'www.' . $base;
 }
 
+/**
+ * The "super-admin zone" is where the platform owner signs in and works:
+ * the root domain, plus localhost/127.0.0.1 for local development. Company
+ * admins sign in on their own subdomain instead.
+ */
+function is_super_admin_zone(): bool
+{
+    $host = strtolower(preg_replace('/:\d+$/', '', $_SERVER['HTTP_HOST'] ?? ''));
+    return is_platform_context() || $host === 'localhost' || $host === '127.0.0.1';
+}
+
 /* ---------- Saved/bookmarked jobs (cookie-based, no visitor accounts) ---------- */
 
 const SAVED_JOBS_COOKIE = 'kastana_saved';
@@ -268,8 +309,8 @@ function toggle_saved_job(int $jobId, bool $save): void
 /** Record an admin action against a posting (job_id may be null after deletion). */
 function log_activity(?int $jobId, string $action, ?string $details = null): void
 {
-    db()->prepare("INSERT INTO activity_log (admin_id, job_id, action, details) VALUES (?,?,?,?)")
-        ->execute([current_admin_id() ?: null, $jobId, $action, $details]);
+    db()->prepare("INSERT INTO activity_log (tenant_id, admin_id, job_id, action, details) VALUES (?,?,?,?,?)")
+        ->execute([current_tenant_id(), current_admin_id() ?: null, $jobId, $action, $details]);
 }
 
 /* ---------- Formatting ---------- */

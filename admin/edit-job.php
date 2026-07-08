@@ -18,8 +18,8 @@ $job = [
 ];
 
 if ($id) {
-    $stmt = db()->prepare("SELECT * FROM jobs WHERE id=? LIMIT 1");
-    $stmt->execute([$id]);
+    $stmt = db()->prepare("SELECT * FROM jobs WHERE id=? AND tenant_id=? LIMIT 1");
+    $stmt->execute([$id, current_tenant_id()]);
     $found = $stmt->fetch();
     if ($found) { $job = $found; $isEdit = true; }
     else { flash_set('error', 'That posting no longer exists.'); redirect('admin/dashboard.php'); }
@@ -105,14 +105,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                  description=?, description_ar=?, requirements=?, requirements_ar=?,
                  how_to_apply=?, how_to_apply_ar=?, apply_url=?, image_path=?, thumbnail_path=?, status=?, is_featured=?, expires_at=?,
                  approved_at=COALESCE(?, approved_at), approved_by=COALESCE(?, approved_by)
-                 WHERE id=?"
+                 WHERE id=? AND tenant_id=?"
             );
             $stmt->execute([
                 $job['title'],$job['title_ar']?:null,$job['company_name'],$job['company_email'],$job['company_website']?:null,
                 $job['location'],$job['location_ar']?:null,$job['job_type'],$catId,$salaryMin,$salaryMax,$job['salary_currency'],
                 $job['description'],$job['description_ar']?:null,$job['requirements']?:null,$job['requirements_ar']?:null,
                 $job['how_to_apply'],$job['how_to_apply_ar']?:null,$job['apply_url']?:null,$finalImage,$finalThumb,
-                $job['status'],$job['is_featured'],$expiresAt,$approvedAt,$approvedBy,$id,
+                $job['status'],$job['is_featured'],$expiresAt,$approvedAt,$approvedBy,$id,current_tenant_id(),
             ]);
             log_activity($id, 'edit', $job['title'] . ' — ' . $job['company_name']);
             flash_set('success', 'Posting updated.');
@@ -120,13 +120,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $slug = slugify($job['title']) . '-' . substr(bin2hex(random_bytes(3)),0,5);
             $stmt = db()->prepare(
                 "INSERT INTO jobs
-                 (title,title_ar,slug,company_name,company_email,company_website,location,location_ar,job_type,category_id,
+                 (tenant_id,title,title_ar,slug,company_name,company_email,company_website,location,location_ar,job_type,category_id,
                   salary_min,salary_max,salary_currency,description,description_ar,requirements,requirements_ar,
                   how_to_apply,how_to_apply_ar,apply_url,image_path,thumbnail_path,status,is_featured,expires_at,approved_at,approved_by)
-                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
             );
             $stmt->execute([
-                $job['title'],$job['title_ar']?:null,$slug,$job['company_name'],$job['company_email'],$job['company_website']?:null,
+                current_tenant_id(),$job['title'],$job['title_ar']?:null,$slug,$job['company_name'],$job['company_email'],$job['company_website']?:null,
                 $job['location'],$job['location_ar']?:null,$job['job_type'],$catId,$salaryMin,$salaryMax,$job['salary_currency'],
                 $job['description'],$job['description_ar']?:null,$job['requirements']?:null,$job['requirements_ar']?:null,
                 $job['how_to_apply'],$job['how_to_apply_ar']?:null,$job['apply_url']?:null,$finalImage,$finalThumb,

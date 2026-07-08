@@ -2,19 +2,24 @@
 require_once __DIR__ . '/../config/config.php';
 require_login();
 
+$tid = current_tenant_id();
 $perPage = 40;
 $page = max(1, (int)($_GET['page'] ?? 1));
-$total = (int) db()->query("SELECT COUNT(*) FROM activity_log")->fetchColumn();
+$totalStmt = db()->prepare("SELECT COUNT(*) FROM activity_log WHERE tenant_id = ?");
+$totalStmt->execute([$tid]);
+$total = (int) $totalStmt->fetchColumn();
 $totalPages = max(1, (int) ceil($total / $perPage));
 $page = min($page, $totalPages);
 
 $stmt = db()->prepare(
     "SELECT al.*, ad.username FROM activity_log al
      LEFT JOIN admins ad ON ad.id = al.admin_id
+     WHERE al.tenant_id = ?
      ORDER BY al.created_at DESC LIMIT ? OFFSET ?"
 );
-$stmt->bindValue(1, $perPage, PDO::PARAM_INT);
-$stmt->bindValue(2, ($page - 1) * $perPage, PDO::PARAM_INT);
+$stmt->bindValue(1, $tid, PDO::PARAM_INT);
+$stmt->bindValue(2, $perPage, PDO::PARAM_INT);
+$stmt->bindValue(3, ($page - 1) * $perPage, PDO::PARAM_INT);
 $stmt->execute();
 $logs = $stmt->fetchAll();
 

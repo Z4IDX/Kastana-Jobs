@@ -5,13 +5,13 @@ require_login();
 $jobId = filter_input(INPUT_GET, 'job_id', FILTER_VALIDATE_INT);
 if (!$jobId) redirect('admin/dashboard.php');
 
-$jobStmt = db()->prepare("SELECT id, title, company_name FROM jobs WHERE id=?");
-$jobStmt->execute([$jobId]);
+$jobStmt = db()->prepare("SELECT id, title, company_name FROM jobs WHERE id=? AND tenant_id=?");
+$jobStmt->execute([$jobId, current_tenant_id()]);
 $job = $jobStmt->fetch();
 if (!$job) { flash_set('error', 'That posting no longer exists.'); redirect('admin/dashboard.php'); }
 
-$stmt = db()->prepare("SELECT * FROM applicants WHERE job_id=? ORDER BY created_at DESC");
-$stmt->execute([$jobId]);
+$stmt = db()->prepare("SELECT * FROM applicants WHERE job_id=? AND tenant_id=? ORDER BY created_at DESC");
+$stmt->execute([$jobId, current_tenant_id()]);
 $applicants = $stmt->fetchAll();
 
 $admin_title = 'Applicants';
