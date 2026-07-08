@@ -308,6 +308,35 @@ function is_super_admin_zone(): bool
     return is_platform_context() || $host === 'localhost' || $host === '127.0.0.1';
 }
 
+/* ---------- Per-tenant branding (falls back to the platform defaults) ---------- */
+
+/** The brand name to display: tenant's brand_name, else its name, else APP_NAME. */
+function brand_name(): string
+{
+    $t = current_tenant();
+    if (is_array($t)) {
+        if (trim((string) ($t['brand_name'] ?? '')) !== '') return $t['brand_name'];
+        if (trim((string) ($t['name'] ?? '')) !== '')       return $t['name'];
+    }
+    return APP_NAME;
+}
+
+/** URL of the logo to show: the tenant's uploaded logo, else the default logo. */
+function brand_logo_url(): string
+{
+    $t = current_tenant();
+    if (is_array($t) && !empty($t['logo_path'])) return url($t['logo_path']);
+    return url('assets/img/logo.png');
+}
+
+/** The tenant's #rrggbb accent colour, or null to use the default palette. */
+function brand_color(): ?string
+{
+    $t = current_tenant();
+    $c = is_array($t) ? (string) ($t['primary_color'] ?? '') : '';
+    return preg_match('/^#[0-9a-fA-F]{6}$/', $c) ? $c : null;
+}
+
 /* ---------- Saved/bookmarked jobs (cookie-based, no visitor accounts) ---------- */
 
 const SAVED_JOBS_COOKIE = 'kastana_saved';

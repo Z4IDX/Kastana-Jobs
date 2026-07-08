@@ -15,12 +15,15 @@ SET NAMES utf8mb4;
 --  Tenants  (one company = one tenant, addressed by subdomain)
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `tenants` (
-  `id`           INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `name`         VARCHAR(150) NOT NULL,
-  `subdomain`    VARCHAR(63)  NOT NULL,
-  `status`       ENUM('pending','active','suspended') NOT NULL DEFAULT 'pending',
-  `created_at`   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `activated_at` DATETIME     NULL DEFAULT NULL,
+  `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name`          VARCHAR(150) NOT NULL,
+  `brand_name`    VARCHAR(150) NULL DEFAULT NULL,   -- optional display name (else `name`)
+  `logo_path`     VARCHAR(255) NULL DEFAULT NULL,   -- optional logo (else default logo)
+  `primary_color` VARCHAR(7)   NULL DEFAULT NULL,   -- optional #rrggbb accent (else default)
+  `subdomain`     VARCHAR(63)  NOT NULL,
+  `status`        ENUM('pending','active','suspended') NOT NULL DEFAULT 'pending',
+  `created_at`    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `activated_at`  DATETIME     NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_tenant_subdomain` (`subdomain`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

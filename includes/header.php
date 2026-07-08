@@ -4,8 +4,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="<?= e($page_desc ?? APP_NAME . ' — ' . APP_TAGLINE) ?>">
-  <title><?= e(($page_title ?? t('nav_browse')) . ' · ' . APP_NAME) ?></title>
+  <meta name="description" content="<?= e($page_desc ?? brand_name() . ' — ' . APP_TAGLINE) ?>">
+  <title><?= e(($page_title ?? t('nav_browse')) . ' · ' . brand_name()) ?></title>
 
   <link rel="icon" type="image/svg+xml" href="<?= url('assets/img/favicon.svg') ?>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,12 +15,15 @@
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
   <?php endif; ?>
   <link rel="stylesheet" href="<?= url('assets/css/style.css') ?>">
+  <?php if ($brandColor = brand_color()): ?>
+  <style>:root{ --chestnut: <?= e($brandColor) ?>; }</style>
+  <?php endif; ?>
 </head>
 <body>
 <header class="site-header">
   <div class="wrap site-header__inner">
-    <a href="<?= url('index.php') ?>" class="brand" aria-label="<?= e(APP_NAME) ?>">
-      <img src="<?= url('assets/img/logo.png') ?>" alt="<?= e(APP_NAME) ?>" class="brand-logo">
+    <a href="<?= url('index.php') ?>" class="brand" aria-label="<?= e(brand_name()) ?>">
+      <img src="<?= e(brand_logo_url()) ?>" alt="<?= e(brand_name()) ?>" class="brand-logo">
     </a>
     <nav class="nav">
       <a href="<?= url('index.php') ?>"><?= e(t('nav_browse')) ?></a>

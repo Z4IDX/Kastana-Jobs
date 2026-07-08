@@ -185,7 +185,7 @@ The site logo lives at `assets/img/logo.png` and shows in the public header and 
 
 **Upgrading an existing install?** Run the one-time migrations in `config/` that you haven't already:
 `migration_arabic.sql`, `migration_uploads.sql`, `migration_expiry.sql`, `migration_thumbnails.sql`,
-`migration_applicants.sql`, `migration_activity_log.sql`, `migration_tenancy.sql`. Fresh imports of `config/database.sql` include everything.
+`migration_applicants.sql`, `migration_activity_log.sql`, `migration_tenancy.sql`, `migration_tenant_branding.sql`. Fresh imports of `config/database.sql` include everything.
 
 ---
 
