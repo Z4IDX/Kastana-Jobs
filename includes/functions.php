@@ -337,6 +337,30 @@ function brand_color(): ?string
     return preg_match('/^#[0-9a-fA-F]{6}$/', $c) ? $c : null;
 }
 
+/**
+ * Read one of the current tenant's customization options from its settings JSON,
+ * returning $default when unset. Decoded once per request.
+ */
+function tenant_setting(string $key, $default = null)
+{
+    static $cache = null;
+    if ($cache === null) {
+        $t = current_tenant();
+        $raw = is_array($t) ? (string) ($t['settings'] ?? '') : '';
+        $cache = $raw !== '' ? (json_decode($raw, true) ?: []) : [];
+    }
+    if (!array_key_exists($key, $cache)) return $default;
+    $v = $cache[$key];
+    return ($v === '' && $default !== null) ? $default : $v;
+}
+
+/** Convenience for boolean toggles (default true unless explicitly false). */
+function tenant_flag(string $key, bool $default = true): bool
+{
+    $v = tenant_setting($key, $default);
+    return !($v === false || $v === '0' || $v === 0 || $v === 'false');
+}
+
 /* ---------- Saved/bookmarked jobs (cookie-based, no visitor accounts) ---------- */
 
 const SAVED_JOBS_COOKIE = 'kastana_saved';

@@ -30,7 +30,7 @@ require_login(); // every admin page is guarded
         <a href="<?= url('admin/categories.php') ?>" class="linkout">Categories</a>
       <?php else: ?>
         <a href="<?= url('admin/dashboard.php') ?>" class="linkout">Dashboard</a>
-        <a href="<?= url('admin/branding.php') ?>" class="linkout">Branding</a>
+        <a href="<?= url('admin/branding.php') ?>" class="linkout">Customize</a>
         <a href="<?= url('admin/activity-log.php') ?>" class="linkout">Activity log</a>
       <?php endif; ?>
       <a href="<?= url('admin/account.php') ?>" class="linkout">Account</a>

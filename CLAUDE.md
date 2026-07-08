@@ -54,6 +54,7 @@ config/
   migration_tenancy.sql  Multi-tenancy Phase 1: tenants table + tenant_id on jobs/applicants/
                      activity_log + admins.role/tenant_id (for existing installs). See docs/MULTITENANCY.md.
   migration_tenant_branding.sql  Phase 2: tenants.brand_name/logo_path/primary_color (per-tenant branding).
+  migration_tenant_settings.sql  Phase 2: tenants.settings JSON (customization options; read via tenant_setting()/tenant_flag()).
   .htaccess          Deny-all (folder not web-accessible).
 
 includes/
@@ -101,7 +102,7 @@ uploads/             User-uploaded images. .htaccess disables code execution her
 ```
 
 ## Database (`kastana_jobs`, utf8mb4)
-- **tenants** (multi-tenancy): id, name, brand_name, logo_path, primary_color (per-tenant branding; blank = platform default), subdomain (uniq), status (pending/active/suspended), created_at, activated_at. One company = one tenant, addressed by subdomain. See docs/MULTITENANCY.md. Branding is read via brand_name()/brand_logo_url()/brand_color(); companies edit it at admin/branding.php.
+- **tenants** (multi-tenancy): id, name, brand_name, logo_path, primary_color (per-tenant branding; blank = platform default), subdomain (uniq), status (pending/active/suspended), created_at, activated_at. One company = one tenant, addressed by subdomain. See docs/MULTITENANCY.md. Branding is read via brand_name()/brand_logo_url()/brand_color(); the `settings` JSON holds customization options (tagline, highlight_color, hero_title/subtext, show_stats, per_page, show_salary, enable_apply, enable_saved, footer_note) read via tenant_setting()/tenant_flag(). Companies edit all of it at admin/branding.php ("Customize").
 - **admins**: id, tenant_id (FK→tenants, NULL = platform super-admin), username, email, password_hash (bcrypt), role (super_admin/company_admin), last_login, created_at. username/email unique **per tenant**.
 - **categories**: id, name, name_ar, slug (uniq), created_at.
 - **jobs**: id, tenant_id (FK→tenants; DEFAULT 1 is transitional until every write sets it), title, title_ar, slug, company_name, company_email, company_website,

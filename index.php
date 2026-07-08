@@ -2,7 +2,7 @@
 require_once __DIR__ . '/config/config.php';
 require_active_tenant(); // platform root -> landing; unknown/inactive subdomain -> themed 404
 
-$perPage = 12;
+$perPage = max(1, min(50, (int) tenant_setting('per_page', 12)));
 $page = max(1, (int)($_GET['page'] ?? 1));
 
 $allowedSorts = ['newest', 'salary', 'alpha'];
@@ -73,19 +73,22 @@ require __DIR__ . '/includes/header.php';
   <div class="orbs orbs--hero" aria-hidden="true"><span></span><span></span><span></span></div>
   <div class="wrap hero__inner">
     <span class="eyebrow"><?= e(t('hero_eyebrow')) ?></span>
-    <h1><?= th('hero_title') ?></h1>
-    <p class="hero__lede"><?= e(t('hero_lede', APP_NAME)) ?></p>
+    <?php $heroTitle = tenant_setting('hero_title'); $heroSub = tenant_setting('hero_subtext'); ?>
+    <h1><?= $heroTitle ? e($heroTitle) : th('hero_title') ?></h1>
+    <p class="hero__lede"><?= $heroSub ? e($heroSub) : e(t('hero_lede', APP_NAME)) ?></p>
 
     <form class="searchbar" method="get" action="<?= url('index.php') ?>#roles" role="search">
       <input type="search" name="q" value="<?= e($q) ?>" placeholder="<?= e(t('search_ph')) ?>" aria-label="<?= e(t('search_btn')) ?>">
       <button type="submit" class="btn btn--honey"><?= e(t('search_btn')) ?></button>
     </form>
 
+    <?php if (tenant_flag('show_stats')): ?>
     <div class="hero__stats">
       <div class="hero__stat"><b><?= $totalJobs ?></b><span><?= e(t('stat_roles')) ?></span></div>
       <div class="hero__stat"><b><?= $totalCompanies ?></b><span><?= e(t('stat_companies')) ?></span></div>
       <div class="hero__stat"><b>100%</b><span><?= e(t('stat_reviewed')) ?></span></div>
     </div>
+    <?php endif; ?>
   </div>
 </section>
 

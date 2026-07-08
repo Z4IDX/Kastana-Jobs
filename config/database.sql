@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS `tenants` (
   `brand_name`    VARCHAR(150) NULL DEFAULT NULL,   -- optional display name (else `name`)
   `logo_path`     VARCHAR(255) NULL DEFAULT NULL,   -- optional logo (else default logo)
   `primary_color` VARCHAR(7)   NULL DEFAULT NULL,   -- optional #rrggbb accent (else default)
+  `settings`      TEXT         NULL DEFAULT NULL,   -- JSON of customization options (see tenant_setting())
   `subdomain`     VARCHAR(63)  NOT NULL,
   `status`        ENUM('pending','active','suspended') NOT NULL DEFAULT 'pending',
   `created_at`    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -28,6 +28,7 @@ if (!$job) {
 $applyErrors = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['apply_job_id'])) {
     require_csrf();
+    if (!tenant_flag('enable_apply')) redirect('job.php?id=' . $id); // applications disabled for this board
     if (input($_POST, 'hp_confirm') !== '') {          // honeypot
         flash_set('success', t('apply_ok'));
         redirect('job.php?id=' . $id);
@@ -76,7 +77,7 @@ require __DIR__ . '/includes/header.php';
       <div class="job-card__meta" style="margin-bottom:2rem">
         <span class="tag"><?= e(job_type_label($job['job_type'])) ?></span>
         <?php if ($job['category_name']): ?><span class="tag"><?= e(cat_name($job['category_name'], $job['category_name_ar'])) ?></span><?php endif; ?>
-        <?php if ($salary): ?><span class="tag tag--salary"><?= e($salary) ?></span><?php endif; ?>
+        <?php if ($salary && tenant_flag('show_salary')): ?><span class="tag tag--salary"><?= e($salary) ?></span><?php endif; ?>
         <span class="tag"><?= e(t('posted')) ?> <?= e(time_ago($job['created_at'])) ?></span>
       </div>
 
@@ -104,7 +105,7 @@ require __DIR__ . '/includes/header.php';
         </div>
         <div><dt><?= e(t('a_location')) ?></dt><dd><?= e($loc) ?></dd></div>
         <div><dt><?= e(t('a_type')) ?></dt><dd><?= e(job_type_label($job['job_type'])) ?></dd></div>
-        <?php if ($salary): ?><div><dt><?= e(t('a_salary')) ?></dt><dd><?= e($salary) ?></dd></div><?php endif; ?>
+        <?php if ($salary && tenant_flag('show_salary')): ?><div><dt><?= e(t('a_salary')) ?></dt><dd><?= e($salary) ?></dd></div><?php endif; ?>
       </dl>
 
       <?php if (!empty($job['apply_url'])): ?>
@@ -130,6 +131,7 @@ require __DIR__ . '/includes/header.php';
         </div>
       <?php endif; ?>
 
+      <?php if (tenant_flag('enable_apply')): ?>
       <h3 style="font-family:var(--font-display);font-size:1.05rem;margin:1.5rem 0 0.5rem"><?= e(t('apply_kastana_title', APP_NAME)) ?></h3>
       <p class="hint"><?= e(t('apply_kastana_lede')) ?></p>
       <form method="post" action="<?= url('job.php?id=' . $job['id']) ?>" novalidate>
@@ -142,6 +144,7 @@ require __DIR__ . '/includes/header.php';
         <div class="field"><label><?= e(t('f_app_note')) ?> <span class="hint"><?= e(t('f_optional')) ?></span></label><textarea name="applicant_note"></textarea></div>
         <button type="submit" class="btn btn--primary btn--block"><?= e(t('f_app_submit')) ?></button>
       </form>
+      <?php endif; ?>
     </aside>
   </div>
 </section>

@@ -6,7 +6,7 @@
       <a href="<?= url('index.php') ?>"><?= e(t('footer_browse')) ?></a>
       <a href="<?= url('admin/login.php') ?>"><?= e(t('footer_admin')) ?></a>
     </nav>
-    <p>&copy; <?= date('Y') ?> <?= e(brand_name()) ?>. <?= e(t('footer_copy')) ?></p>
+    <p>&copy; <?= date('Y') ?> <?= e(brand_name()) ?>. <?= e(tenant_setting('footer_note', t('footer_copy'))) ?></p>
   </div>
 </footer>
 <script src="<?= url('assets/js/main.js') ?>" defer></script>
