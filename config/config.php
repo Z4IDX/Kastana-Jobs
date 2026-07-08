@@ -6,31 +6,39 @@
  * Everything else is wired up for you.
  */
 
+/* ------------------------------------------------------------
+ *  Machine-specific overrides written by the setup wizard
+ *  (install.php). If present, the values it defines win; the
+ *  defaults below fill in anything it didn't set. This file is
+ *  git-ignored so real credentials never get committed.
+ * ------------------------------------------------------------ */
+if (is_file(__DIR__ . '/config.local.php')) {
+    require __DIR__ . '/config.local.php';
+}
+
 /* ============================================================
  *  1. DATABASE  (XAMPP defaults: user "root", empty password)
  * ============================================================ */
-define('DB_HOST', '127.0.0.1');
-define('DB_NAME', 'kastana_jobs');
-define('DB_USER', 'root');
-define('DB_PASS', '');          // XAMPP default is empty. Set a password in production!
-define('DB_CHARSET', 'utf8mb4');
+defined('DB_HOST')    || define('DB_HOST', '127.0.0.1');
+defined('DB_NAME')    || define('DB_NAME', 'kastana_jobs');
+defined('DB_USER')    || define('DB_USER', 'root');
+defined('DB_PASS')    || define('DB_PASS', '');   // XAMPP default is empty. Set a password in production!
+defined('DB_CHARSET') || define('DB_CHARSET', 'utf8mb4');
 
 /* ============================================================
  *  2. APP & BRANDING
- *     White-label: change these to rebrand the whole site.
+ *     White-label: change these (or run install.php) to rebrand.
  *     (The logo is assets/img/logo.png — replace that file too.)
  * ============================================================ */
-define('APP_NAME', 'Kastana Jobs');                 // brand name shown across the site
-define('APP_TAGLINE', 'A curated board of hand-reviewed roles from great companies.');
-define('BRAND_URL', '');                            // footer brand link; '' = link to the home page
+defined('APP_NAME')    || define('APP_NAME', 'Kastana Jobs');   // brand name shown across the site
+defined('APP_TAGLINE') || define('APP_TAGLINE', 'A curated board of hand-reviewed roles from great companies.');
+defined('BRAND_URL')   || define('BRAND_URL', '');              // footer brand link; '' = link to the home page
 
-// Base URL of the site (no trailing slash).
-// If the project sits in htdocs/kastana-jobs, this is the default.
-// Change to '' if you serve it from the web root.
-define('BASE_URL', '/kastana-jobs');
+// Base URL of the site (no trailing slash). '' if served from the web root.
+defined('BASE_URL')  || define('BASE_URL', '/kastana-jobs');
 
 // Set to true only when running over HTTPS. Enables secure cookies + HSTS.
-define('USE_HTTPS', false);
+defined('USE_HTTPS') || define('USE_HTTPS', false);
 
 // Login lockout: max failed attempts within the window before a temporary block.
 define('LOGIN_MAX_ATTEMPTS', 5);

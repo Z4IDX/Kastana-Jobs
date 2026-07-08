@@ -51,7 +51,19 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for how these fit together and why.
 
 ---
 
-## Setup (XAMPP)
+## Setup — the easy way (wizard)
+
+After copying the folder into `htdocs` and starting Apache + MySQL, open:
+```
+http://localhost/kastana-jobs/install.php
+```
+The wizard checks your PHP setup, creates the database, imports the schema, sets your **brand name**, and creates your **admin account** — no editing files or importing SQL by hand. **Delete `install.php` when it's done.** (It refuses to run once configured, but deleting it is safest.) Your settings are written to `config/config.local.php`, which is git-ignored so credentials never get committed.
+
+Prefer to do it manually? The full steps are below.
+
+---
+
+## Setup (manual, XAMPP)
 
 **1. Copy the folder**
 Put the whole `kastana-jobs` folder into your XAMPP `htdocs` directory:
