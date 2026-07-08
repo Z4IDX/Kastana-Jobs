@@ -67,7 +67,7 @@ require __DIR__ . '/includes/header.php';
   <div class="wrap hero__inner">
     <span class="eyebrow"><?= e(t('hero_eyebrow')) ?></span>
     <h1><?= th('hero_title') ?></h1>
-    <p class="hero__lede"><?= e(t('hero_lede')) ?></p>
+    <p class="hero__lede"><?= e(t('hero_lede', APP_NAME)) ?></p>
 
     <form class="searchbar" method="get" action="<?= url('index.php') ?>#roles" role="search">
       <input type="search" name="q" value="<?= e($q) ?>" placeholder="<?= e(t('search_ph')) ?>" aria-label="<?= e(t('search_btn')) ?>">

@@ -16,9 +16,13 @@ define('DB_PASS', '');          // XAMPP default is empty. Set a password in pro
 define('DB_CHARSET', 'utf8mb4');
 
 /* ============================================================
- *  2. APP
+ *  2. APP & BRANDING
+ *     White-label: change these to rebrand the whole site.
+ *     (The logo is assets/img/logo.png — replace that file too.)
  * ============================================================ */
-define('APP_NAME', 'Kastana Jobs');
+define('APP_NAME', 'Kastana Jobs');                 // brand name shown across the site
+define('APP_TAGLINE', 'A curated board of hand-reviewed roles from great companies.');
+define('BRAND_URL', '');                            // footer brand link; '' = link to the home page
 
 // Base URL of the site (no trailing slash).
 // If the project sits in htdocs/kastana-jobs, this is the default.

@@ -1,7 +1,7 @@
 </main>
 <footer class="site-footer">
   <div class="wrap site-footer__inner">
-    <a href="https://kastana.net/services/" class="brand"><img src="<?= url('assets/img/logo.png') ?>" alt="<?= e(APP_NAME) ?>" class="brand-logo brand-logo--sm"></a>
+    <a href="<?= e(BRAND_URL !== '' ? BRAND_URL : url('index.php')) ?>" class="brand"><img src="<?= url('assets/img/logo.png') ?>" alt="<?= e(APP_NAME) ?>" class="brand-logo brand-logo--sm"></a>
     <nav class="footer-links">
       <a href="<?= url('index.php') ?>"><?= e(t('footer_browse')) ?></a>
       <a href="<?= url('submit.php') ?>"><?= e(t('footer_post')) ?></a>

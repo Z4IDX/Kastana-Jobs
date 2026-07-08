@@ -118,7 +118,7 @@ require __DIR__ . '/includes/header.php';
         <?= e(t('copy_link')) ?>
       </button>
 
-      <p style="text-align:center;font-size:0.8rem;color:var(--ink-faint);margin-top:0.9rem"><?= e(t('mention')) ?></p>
+      <p style="text-align:center;font-size:0.8rem;color:var(--ink-faint);margin-top:0.9rem"><?= e(t('mention', APP_NAME)) ?></p>
 
       <?php foreach (flash_get() as $f): ?>
         <div class="alert alert--<?= e($f['type']) ?>" style="margin-top:1rem"><?= e($f['message']) ?></div>
@@ -129,7 +129,7 @@ require __DIR__ . '/includes/header.php';
         </div>
       <?php endif; ?>
 
-      <h3 style="font-family:var(--font-display);font-size:1.05rem;margin:1.5rem 0 0.5rem"><?= e(t('apply_kastana_title')) ?></h3>
+      <h3 style="font-family:var(--font-display);font-size:1.05rem;margin:1.5rem 0 0.5rem"><?= e(t('apply_kastana_title', APP_NAME)) ?></h3>
       <p class="hint"><?= e(t('apply_kastana_lede')) ?></p>
       <form method="post" action="<?= url('job.php?id=' . $job['id']) ?>" novalidate>
         <?= csrf_field() ?>

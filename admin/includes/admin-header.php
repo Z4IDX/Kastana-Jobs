@@ -18,7 +18,7 @@ require_login(); // every admin page is guarded
 <body>
 <div class="admin-bar">
   <div class="wrap admin-bar__inner">
-    <a href="<?= url('admin/dashboard.php') ?>" class="admin-brand">Kastana<span class="dot">.</span>Admin</a>
+    <a href="<?= url('admin/dashboard.php') ?>" class="admin-brand"><?= e(APP_NAME) ?><span class="dot">.</span>Admin</a>
     <div class="admin-bar__right">
       <span class="who"><?= e($_SESSION['admin_username'] ?? '') ?></span>
       <a href="<?= url('admin/categories.php') ?>" class="linkout">Categories</a>

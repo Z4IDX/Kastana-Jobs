@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
 <div class="login-wrap">
   <div class="login-card">
-    <div class="admin-brand">Kastana<span class="dot">.</span>Admin</div>
+    <div class="admin-brand"><?= e(APP_NAME) ?><span class="dot">.</span>Admin</div>
     <h1>Welcome back</h1>
     <p class="muted">Sign in to review and manage postings.</p>
 

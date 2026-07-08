@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="<?= e($page_desc ?? 'Kastana Jobs — a curated board of hand-reviewed roles from great companies.') ?>">
+  <meta name="description" content="<?= e($page_desc ?? APP_NAME . ' — ' . APP_TAGLINE) ?>">
   <title><?= e(($page_title ?? t('nav_browse')) . ' · ' . APP_NAME) ?></title>
 
   <link rel="icon" type="image/svg+xml" href="<?= url('assets/img/favicon.svg') ?>">
