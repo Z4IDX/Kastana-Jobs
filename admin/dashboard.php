@@ -24,26 +24,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         "UPDATE jobs SET status='approved', approved_at=NOW(), approved_by=? WHERE id=? AND tenant_id=?"
                     )->execute([current_admin_id(), $jobId, $tid]);
                     log_activity($jobId, 'approve', $jobLabel);
-                    flash_set('success', 'Posting approved and published.');
+                    flash_set('success', t('ad_fl_approved'));
                     break;
 
                 case 'reject':
                     db()->prepare("UPDATE jobs SET status='rejected' WHERE id=? AND tenant_id=?")->execute([$jobId, $tid]);
                     log_activity($jobId, 'reject', $jobLabel);
-                    flash_set('info', 'Posting rejected. It will not appear on the board.');
+                    flash_set('info', t('ad_fl_rejected'));
                     break;
 
                 case 'unpublish':
                     db()->prepare("UPDATE jobs SET status='pending' WHERE id=? AND tenant_id=?")->execute([$jobId, $tid]);
                     log_activity($jobId, 'unpublish', $jobLabel);
-                    flash_set('info', 'Posting moved back to pending.');
+                    flash_set('info', t('ad_fl_unpublished'));
                     break;
 
                 case 'feature':
                     $wasFeatured = (bool) $jobRow['is_featured'];
                     db()->prepare("UPDATE jobs SET is_featured = 1 - is_featured WHERE id=? AND tenant_id=?")->execute([$jobId, $tid]);
                     log_activity($jobId, $wasFeatured ? 'unfeature' : 'feature', $jobLabel);
-                    flash_set('success', 'Featured status updated.');
+                    flash_set('success', t('ad_fl_featured'));
                     break;
 
                 case 'delete':
@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     delete_uploaded_image($jobRow['image_path'] ?: null);
                     delete_uploaded_image($jobRow['thumbnail_path'] ?: null);
                     db()->prepare("DELETE FROM jobs WHERE id=? AND tenant_id=?")->execute([$jobId, $tid]);
-                    flash_set('info', 'Posting deleted permanently.');
+                    flash_set('info', t('ad_fl_deleted'));
                     break;
             }
         }
@@ -97,16 +97,17 @@ if ($tab === 'all') {
 }
 $jobs = $stmt->fetchAll();
 
-$admin_title = 'Dashboard';
+$admin_title = t('a_dashboard');
 require __DIR__ . '/includes/admin-header.php';
+$statusLabels = ['pending' => t('ad_tab_pending'), 'approved' => t('ad_tab_published'), 'rejected' => t('ad_tab_rejected')];
 ?>
 
 <div class="page-head">
   <div>
-    <h1>Postings</h1>
-    <p>Review submissions, then approve, edit, or reject them.</p>
+    <h1><?= e(t('ad_postings')) ?></h1>
+    <p><?= e(t('ad_postings_lede')) ?></p>
   </div>
-  <a href="<?= url('admin/edit-job.php') ?>" class="btn btn--honey">+ New posting</a>
+  <a href="<?= url('admin/edit-job.php') ?>" class="btn btn--honey"><?= e(t('ad_new_posting')) ?></a>
 </div>
 
 <?php foreach (flash_get() as $f): ?>
@@ -114,19 +115,19 @@ require __DIR__ . '/includes/admin-header.php';
 <?php endforeach; ?>
 
 <div class="stat-row">
-  <div class="stat is-pending"><b><?= (int)$counts['pending'] ?></b><span>Awaiting review</span></div>
-  <div class="stat is-approved"><b><?= (int)$counts['approved'] ?></b><span>Published</span></div>
-  <div class="stat"><b><?= (int)$counts['rejected'] ?></b><span>Rejected</span></div>
-  <div class="stat"><b><?= (int)$counts['total'] ?></b><span>Total</span></div>
+  <div class="stat is-pending"><b><?= (int)$counts['pending'] ?></b><span><?= e(t('ad_stat_pending')) ?></span></div>
+  <div class="stat is-approved"><b><?= (int)$counts['approved'] ?></b><span><?= e(t('ad_stat_published')) ?></span></div>
+  <div class="stat"><b><?= (int)$counts['rejected'] ?></b><span><?= e(t('ad_stat_rejected')) ?></span></div>
+  <div class="stat"><b><?= (int)$counts['total'] ?></b><span><?= e(t('ad_stat_total')) ?></span></div>
 </div>
 
 <nav class="tabs">
   <?php
     $tabLabels = [
-      'pending'  => ['Pending',  (int)$counts['pending']],
-      'approved' => ['Published',(int)$counts['approved']],
-      'rejected' => ['Rejected', (int)$counts['rejected']],
-      'all'      => ['All',      (int)$counts['total']],
+      'pending'  => [t('ad_tab_pending'),   (int)$counts['pending']],
+      'approved' => [t('ad_tab_published'), (int)$counts['approved']],
+      'rejected' => [t('ad_tab_rejected'),  (int)$counts['rejected']],
+      'all'      => [t('ad_tab_all'),        (int)$counts['total']],
     ];
     foreach ($tabLabels as $key => [$label, $n]):
   ?>
@@ -139,8 +140,8 @@ require __DIR__ . '/includes/admin-header.php';
 <div class="job-list">
   <?php if (empty($jobs)): ?>
     <div class="empty">
-      <h3>Nothing here</h3>
-      <p>There are no <?= $tab === 'all' ? '' : e($tab) ?> postings right now.</p>
+      <h3><?= e(t('ad_nothing')) ?></h3>
+      <p><?= e(t('ad_no_postings')) ?></p>
     </div>
   <?php endif; ?>
 
@@ -154,27 +155,27 @@ require __DIR__ . '/includes/admin-header.php';
       <div class="jrow__main">
         <div class="jrow__title">
           <?= e($job['title']) ?>
-          <span class="status status--<?= e($job['status']) ?>"><?= e($job['status']) ?></span>
-          <?php if ($job['is_featured']): ?><span class="status" style="background:var(--honey-soft);color:var(--chestnut-deep)">Featured</span><?php endif; ?>
+          <span class="status status--<?= e($job['status']) ?>"><?= e($statusLabels[$job['status']] ?? $job['status']) ?></span>
+          <?php if ($job['is_featured']): ?><span class="status" style="background:var(--honey-soft);color:var(--chestnut-deep)"><?= e(t('ad_featured')) ?></span><?php endif; ?>
           <?php if (!empty($job['title_ar'])): ?><span class="status" style="background:#e6eef7;color:#1D5C9D">AR</span><?php endif; ?>
-          <?php if (!empty($job['expires_at']) && $job['expires_at'] < date('Y-m-d')): ?><span class="status" style="background:#eee;color:#888">Expired</span><?php endif; ?>
+          <?php if (!empty($job['expires_at']) && $job['expires_at'] < date('Y-m-d')): ?><span class="status" style="background:#eee;color:#888"><?= e(t('ad_expired')) ?></span><?php endif; ?>
         </div>
         <div class="jrow__sub"><?= e($job['company_name']) ?> · <?= e($job['location']) ?> · <?= e($job['company_email']) ?></div>
         <div class="jrow__meta">
           <span class="pill"><?= e($job['job_type']) ?></span>
           <?php if ($job['category_name']): ?><span class="pill"><?= e($job['category_name']) ?></span><?php endif; ?>
           <?php if ($salary): ?><span class="pill"><?= e($salary) ?></span><?php endif; ?>
-          <span class="pill">Submitted <?= e(time_ago($job['created_at'])) ?></span>
+          <span class="pill"><?= e(t('posted')) ?> <?= e(time_ago($job['created_at'])) ?></span>
         </div>
       </div>
 
       <div class="jrow__actions">
         <?php if ($job['status'] === 'approved'): ?>
-          <a href="<?= url('job.php?id=' . $job['id']) ?>" target="_blank" class="btn btn--ghost btn--sm">View ↗</a>
+          <a href="<?= url('job.php?id=' . $job['id']) ?>" target="_blank" class="btn btn--ghost btn--sm"><?= e(t('ad_view')) ?> ↗</a>
         <?php endif; ?>
 
-        <a href="<?= url('admin/edit-job.php?id=' . $job['id']) ?>" class="btn btn--ghost btn--sm">Edit</a>
-        <a href="<?= url('admin/applicants.php?job_id=' . $job['id']) ?>" class="btn btn--ghost btn--sm">Applicants (<?= (int)$job['applicant_count'] ?>)</a>
+        <a href="<?= url('admin/edit-job.php?id=' . $job['id']) ?>" class="btn btn--ghost btn--sm"><?= e(t('ad_edit')) ?></a>
+        <a href="<?= url('admin/applicants.php?job_id=' . $job['id']) ?>" class="btn btn--ghost btn--sm"><?= e(t('ad_applicants')) ?> (<?= (int)$job['applicant_count'] ?>)</a>
 
         <?php if ($job['status'] !== 'approved'): ?>
           <form method="post" class="inline-form">
@@ -182,7 +183,7 @@ require __DIR__ . '/includes/admin-header.php';
             <input type="hidden" name="action" value="approve">
             <input type="hidden" name="job_id" value="<?= (int)$job['id'] ?>">
             <input type="hidden" name="return" value="<?= e($tab) ?>">
-            <button class="btn btn--green btn--sm">Approve</button>
+            <button class="btn btn--green btn--sm"><?= e(t('ad_approve')) ?></button>
           </form>
         <?php endif; ?>
 
@@ -192,14 +193,14 @@ require __DIR__ . '/includes/admin-header.php';
             <input type="hidden" name="action" value="feature">
             <input type="hidden" name="job_id" value="<?= (int)$job['id'] ?>">
             <input type="hidden" name="return" value="<?= e($tab) ?>">
-            <button class="btn btn--ghost btn--sm"><?= $job['is_featured'] ? 'Unfeature' : 'Feature' ?></button>
+            <button class="btn btn--ghost btn--sm"><?= $job['is_featured'] ? e(t('ad_unfeature')) : e(t('ad_feature')) ?></button>
           </form>
           <form method="post" class="inline-form">
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="unpublish">
             <input type="hidden" name="job_id" value="<?= (int)$job['id'] ?>">
             <input type="hidden" name="return" value="<?= e($tab) ?>">
-            <button class="btn btn--ghost btn--sm">Unpublish</button>
+            <button class="btn btn--ghost btn--sm"><?= e(t('ad_unpublish')) ?></button>
           </form>
         <?php endif; ?>
 
@@ -209,16 +210,16 @@ require __DIR__ . '/includes/admin-header.php';
             <input type="hidden" name="action" value="reject">
             <input type="hidden" name="job_id" value="<?= (int)$job['id'] ?>">
             <input type="hidden" name="return" value="<?= e($tab) ?>">
-            <button class="btn btn--red btn--sm">Reject</button>
+            <button class="btn btn--red btn--sm"><?= e(t('ad_reject')) ?></button>
           </form>
         <?php endif; ?>
 
-        <form method="post" class="inline-form" data-confirm="Delete this posting permanently? This cannot be undone.">
+        <form method="post" class="inline-form" data-confirm="<?= e(t('ad_confirm_delete')) ?>">
           <?= csrf_field() ?>
           <input type="hidden" name="action" value="delete">
           <input type="hidden" name="job_id" value="<?= (int)$job['id'] ?>">
           <input type="hidden" name="return" value="<?= e($tab) ?>">
-          <button class="btn btn--red btn--sm">Delete</button>
+          <button class="btn btn--red btn--sm"><?= e(t('ad_delete')) ?></button>
         </form>
       </div>
     </article>

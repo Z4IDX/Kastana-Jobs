@@ -139,22 +139,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$admin_title = $isEdit ? 'Edit posting' : 'New posting';
+$admin_title = $isEdit ? t('ad_edit_job') : t('ad_new_job');
 require __DIR__ . '/includes/admin-header.php';
 $v = fn($k) => e((string)($job[$k] ?? ''));
 ?>
 
 <div class="page-head">
   <div>
-    <h1><?= $isEdit ? 'Edit posting' : 'New posting' ?></h1>
-    <p><?= $isEdit ? 'Update details, then save. Set the status to control visibility.' : 'Create a posting directly. Set status to Published to make it live.' ?></p>
+    <h1><?= $isEdit ? e(t('ad_edit_job')) : e(t('ad_new_job')) ?></h1>
+    <p><?= $isEdit ? e(t('ad_lede_edit')) : e(t('ad_lede_new')) ?></p>
   </div>
-  <a href="<?= url('admin/dashboard.php') ?>" class="btn btn--ghost">← Back</a>
+  <a href="<?= url('admin/dashboard.php') ?>" class="btn btn--ghost"><?= e(t('ad_back')) ?></a>
 </div>
 
 <?php if (!empty($errors)): ?>
   <div class="alert alert--error">
-    <strong>Please fix:</strong>
+    <strong><?= e(t('ad_please_fix')) ?></strong>
     <ul style="margin:0.3rem 0 0 1rem;padding:0"><?php foreach ($errors as $err): ?><li><?= e($err) ?></li><?php endforeach; ?></ul>
   </div>
 <?php endif; ?>
@@ -163,24 +163,24 @@ $v = fn($k) => e((string)($job[$k] ?? ''));
   <?= csrf_field() ?>
   <div class="edit-card">
 
-    <div class="edit-section-title">Role</div>
+    <div class="edit-section-title"><?= e(t('ad_sec_role')) ?></div>
     <div class="field">
-      <label>Job title <span class="req">*</span></label>
+      <label><?= e(t('ad_f_title')) ?> <span class="req">*</span></label>
       <input type="text" name="title" value="<?= $v('title') ?>" maxlength="150" required>
     </div>
     <div class="field-row">
       <div class="field">
-        <label>Job type <span class="req">*</span></label>
+        <label><?= e(t('ad_f_type')) ?> <span class="req">*</span></label>
         <select name="job_type">
           <?php foreach ($allowedTypes as $t): ?>
-            <option value="<?= $t ?>" <?= $job['job_type']===$t?'selected':'' ?>><?= $t ?></option>
+            <option value="<?= $t ?>" <?= $job['job_type']===$t?'selected':'' ?>><?= e(job_type_label($t)) ?></option>
           <?php endforeach; ?>
         </select>
       </div>
       <div class="field">
-        <label>Category</label>
+        <label><?= e(t('ad_f_category')) ?></label>
         <select name="category_id">
-          <option value="">— None —</option>
+          <option value=""><?= e(t('ad_none')) ?></option>
           <?php foreach ($categories as $c): ?>
             <option value="<?= (int)$c['id'] ?>" <?= (string)$job['category_id']===(string)$c['id']?'selected':'' ?>><?= e($c['name']) ?></option>
           <?php endforeach; ?>
@@ -188,63 +188,63 @@ $v = fn($k) => e((string)($job[$k] ?? ''));
       </div>
     </div>
 
-    <div class="edit-section-title">Company</div>
+    <div class="edit-section-title"><?= e(t('ad_sec_company')) ?></div>
     <div class="field-row">
       <div class="field">
-        <label>Company name <span class="req">*</span></label>
+        <label><?= e(t('ad_f_company')) ?> <span class="req">*</span></label>
         <input type="text" name="company_name" value="<?= $v('company_name') ?>" maxlength="150" required>
       </div>
       <div class="field">
-        <label>Company email <span class="req">*</span></label>
+        <label><?= e(t('ad_f_email')) ?> <span class="req">*</span></label>
         <input type="email" name="company_email" value="<?= $v('company_email') ?>" maxlength="150" required>
       </div>
     </div>
     <div class="field-row">
       <div class="field">
-        <label>Company website</label>
+        <label><?= e(t('ad_f_website')) ?></label>
         <input type="url" name="company_website" value="<?= $v('company_website') ?>" placeholder="https://">
       </div>
       <div class="field">
-        <label>Location <span class="req">*</span></label>
+        <label><?= e(t('ad_f_location')) ?> <span class="req">*</span></label>
         <input type="text" name="location" value="<?= $v('location') ?>" maxlength="150" required>
       </div>
     </div>
 
-    <div class="edit-section-title">Compensation</div>
+    <div class="edit-section-title"><?= e(t('ad_sec_comp')) ?></div>
     <div class="field-row">
       <div class="field">
-        <label>Salary range</label>
+        <label><?= e(t('ad_f_salary')) ?></label>
         <div style="display:flex;gap:0.6rem">
-          <input type="number" name="salary_min" value="<?= $v('salary_min') ?>" min="0" placeholder="Min">
-          <input type="number" name="salary_max" value="<?= $v('salary_max') ?>" min="0" placeholder="Max">
+          <input type="number" name="salary_min" value="<?= $v('salary_min') ?>" min="0" placeholder="<?= e(t('f_min')) ?>">
+          <input type="number" name="salary_max" value="<?= $v('salary_max') ?>" min="0" placeholder="<?= e(t('f_max')) ?>">
         </div>
       </div>
       <div class="field">
-        <label>Currency</label>
+        <label><?= e(t('ad_f_currency')) ?></label>
         <input type="text" name="salary_currency" value="<?= $v('salary_currency') ?>" maxlength="3" style="text-transform:uppercase">
       </div>
     </div>
 
-    <div class="edit-section-title">Details</div>
+    <div class="edit-section-title"><?= e(t('ad_sec_details')) ?></div>
     <div class="field">
-      <label>Description <span class="req">*</span></label>
+      <label><?= e(t('ad_f_desc')) ?> <span class="req">*</span></label>
       <textarea name="description" required><?= $v('description') ?></textarea>
     </div>
     <div class="field">
-      <label>Requirements</label>
+      <label><?= e(t('ad_f_req')) ?></label>
       <textarea name="requirements"><?= $v('requirements') ?></textarea>
     </div>
     <div class="field">
-      <label>How to apply <span class="req">*</span></label>
+      <label><?= e(t('ad_f_apply')) ?> <span class="req">*</span></label>
       <textarea name="how_to_apply" required><?= $v('how_to_apply') ?></textarea>
     </div>
     <div class="field">
-      <label>Application link</label>
+      <label><?= e(t('ad_f_applyurl')) ?></label>
       <input type="url" name="apply_url" value="<?= $v('apply_url') ?>" placeholder="https://">
     </div>
 
     <div class="field">
-      <label>Company logo / image <span class="hint">(JPG, PNG, WEBP or GIF, up to 2 MB)</span></label>
+      <label><?= e(t('ad_f_logo')) ?> <span class="hint">(<?= e(t('ad_logo_hint')) ?>)</span></label>
       <?php if (!empty($job['image_path'])): ?>
         <div class="img-review">
           <img src="<?= url($job['thumbnail_path'] ?: $job['image_path']) ?>" alt="Current image" class="img-review__thumb">

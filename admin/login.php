@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_csrf();
 
     if (is_locked_out($ip)) {
-        $error = 'Too many failed attempts. Please wait ' . LOGIN_WINDOW_MIN . ' minutes and try again.';
+        $error = t('ad_locked', LOGIN_WINDOW_MIN);
     } else {
         $username = input($_POST, 'username');
         $password = (string) ($_POST['password'] ?? '');
@@ -52,22 +52,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             password_verify($password, $dummyHash); // equalize timing
             record_login_attempt($ip, $username, false);
             $remaining = max(0, LOGIN_MAX_ATTEMPTS - recent_failed_attempts($ip));
-            $error = 'Incorrect username or password.'
-                   . ($remaining > 0 ? " {$remaining} attempt(s) left." : '');
+            $error = t('ad_bad_creds')
+                   . ($remaining > 0 ? ' ' . t('ad_attempts_left', $remaining) : '');
         }
     }
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= e(current_lang()) ?>" dir="<?= e(dir_attr()) ?>">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
-  <title>Sign in · <?= e(APP_NAME) ?> Admin</title>
+  <title><?= e(t('ad_signin')) ?> · <?= e(APP_NAME) ?> Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <?php if (is_rtl()): ?>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+  <?php endif; ?>
   <link rel="icon" type="image/svg+xml" href="<?= url('assets/img/favicon.svg') ?>">
   <link rel="stylesheet" href="<?= url('assets/css/admin.css') ?>">
 </head>
@@ -75,8 +78,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="login-wrap">
   <div class="login-card">
     <div class="admin-brand"><?= e(APP_NAME) ?><span class="dot">.</span>Admin</div>
-    <h1>Welcome back</h1>
-    <p class="muted">Sign in to review and manage postings.</p>
+    <h1><?= e(t('ad_welcome')) ?></h1>
+    <p class="muted"><?= e(t('ad_login_lede')) ?></p>
 
     <?php foreach (flash_get() as $f): ?>
       <div class="alert alert--<?= e($f['type']) ?>"><?= e($f['message']) ?></div>
@@ -88,16 +91,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <form method="post" action="<?= url('admin/login.php') ?>" novalidate>
       <?= csrf_field() ?>
       <div class="field">
-        <label for="username">Username</label>
+        <label for="username"><?= e(t('ad_username')) ?></label>
         <input type="text" id="username" name="username" autocomplete="username" required autofocus>
       </div>
       <div class="field">
-        <label for="password">Password</label>
+        <label for="password"><?= e(t('ad_password')) ?></label>
         <input type="password" id="password" name="password" autocomplete="current-password" required>
       </div>
-      <button type="submit" class="btn btn--primary btn--block">Sign in</button>
+      <button type="submit" class="btn btn--primary btn--block"><?= e(t('ad_signin')) ?></button>
     </form>
-    <a href="<?= url('index.php') ?>" class="btn btn--ghost btn--block" style="margin-top:0.8rem">← Back to site</a>
+    <a href="<?= url('index.php') ?>" class="btn btn--ghost btn--block" style="margin-top:0.8rem"><?= e(t('ad_back_site')) ?></a>
   </div>
 </div>
 </body>
