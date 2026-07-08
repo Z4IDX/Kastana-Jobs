@@ -15,9 +15,10 @@ $orderMap = [
 $categorySlug = $_GET['category'] ?? 'all';
 $q = trim((string)($_GET['q'] ?? ''));
 
+$tid = current_tenant_id();
 $expiryClause = "(j.expires_at IS NULL OR j.expires_at >= CURDATE())";
-$where = "j.status = 'approved' AND $expiryClause";
-$params = [];
+$where = "j.tenant_id = ? AND j.status = 'approved' AND $expiryClause";
+$params = [$tid];
 if ($categorySlug !== 'all' && $categorySlug !== '') {
     $where .= " AND c.slug = ?";
     $params[] = $categorySlug;
@@ -47,16 +48,21 @@ $stmt->bindValue($i++, $offset, PDO::PARAM_INT);
 $stmt->execute();
 $jobs = $stmt->fetchAll();
 
-$catStmt = db()->query(
+$catStmt = db()->prepare(
     "SELECT DISTINCT c.name, c.name_ar, c.slug
      FROM categories c
-     JOIN jobs j ON j.category_id = c.id AND j.status = 'approved' AND $expiryClause
+     JOIN jobs j ON j.category_id = c.id AND j.tenant_id = ? AND j.status = 'approved' AND $expiryClause
      ORDER BY c.name"
 );
+$catStmt->execute([$tid]);
 $categories = $catStmt->fetchAll();
 
-$totalJobs = (int) db()->query("SELECT COUNT(*) FROM jobs j WHERE j.status='approved' AND $expiryClause")->fetchColumn();
-$totalCompanies = (int) db()->query("SELECT COUNT(DISTINCT j.company_name) FROM jobs j WHERE j.status='approved' AND $expiryClause")->fetchColumn();
+$sJobs = db()->prepare("SELECT COUNT(*) FROM jobs j WHERE j.tenant_id = ? AND j.status='approved' AND $expiryClause");
+$sJobs->execute([$tid]);
+$totalJobs = (int) $sJobs->fetchColumn();
+$sCompanies = db()->prepare("SELECT COUNT(DISTINCT j.company_name) FROM jobs j WHERE j.tenant_id = ? AND j.status='approved' AND $expiryClause");
+$sCompanies->execute([$tid]);
+$totalCompanies = (int) $sCompanies->fetchColumn();
 
 $page_title = t('board_title');
 require __DIR__ . '/includes/header.php';

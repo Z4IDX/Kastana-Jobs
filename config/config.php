@@ -37,6 +37,11 @@ defined('BRAND_URL')   || define('BRAND_URL', '');              // footer brand 
 // Base URL of the site (no trailing slash). '' if served from the web root.
 defined('BASE_URL')  || define('BASE_URL', '/kastana-jobs');
 
+// Multi-tenancy: the base domain companies get a subdomain under
+// (acme.APP_DOMAIN). Set to your real domain in production. Locally we use a
+// .test domain served by an Apache vhost (see docs/LOCAL-SUBDOMAINS.md).
+defined('APP_DOMAIN') || define('APP_DOMAIN', 'kastana.test');
+
 // Set to true only when running over HTTPS. Enables secure cookies + HSTS.
 defined('USE_HTTPS') || define('USE_HTTPS', false);
 

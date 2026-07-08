@@ -7,10 +7,10 @@ if (!$id) redirect('index.php');
 $stmt = db()->prepare(
     "SELECT j.*, c.name AS category_name, c.name_ar AS category_name_ar
      FROM jobs j LEFT JOIN categories c ON c.id = j.category_id
-     WHERE j.id = ? AND j.status = 'approved'
+     WHERE j.id = ? AND j.tenant_id = ? AND j.status = 'approved'
        AND (j.expires_at IS NULL OR j.expires_at >= CURDATE()) LIMIT 1"
 );
-$stmt->execute([$id]);
+$stmt->execute([$id, current_tenant_id()]);
 $job = $stmt->fetch();
 
 if (!$job) {
@@ -41,8 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['apply_job_id'])) {
     if ($aPhone !== '' && !preg_match('/^[0-9+\-\s()]{6,25}$/', $aPhone)) $applyErrors[] = t('err_app_phone');
 
     if (empty($applyErrors)) {
-        db()->prepare("INSERT INTO applicants (job_id, name, email, phone, cover_note) VALUES (?,?,?,?,?)")
-            ->execute([$id, $aName, $aEmail, $aPhone ?: null, $aNote ?: null]);
+        db()->prepare("INSERT INTO applicants (tenant_id, job_id, name, email, phone, cover_note) VALUES (?,?,?,?,?,?)")
+            ->execute([current_tenant_id(), $id, $aName, $aEmail, $aPhone ?: null, $aNote ?: null]);
         flash_set('success', t('apply_ok'));
         redirect('job.php?id=' . $id);
     }

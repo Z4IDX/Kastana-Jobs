@@ -185,6 +185,52 @@ function query_url(array $overrides): string
     return $path . '?' . http_build_query($q);
 }
 
+/* ---------- Multi-tenancy: resolve the current company from the subdomain ---------- */
+
+/**
+ * The tenant (company) this request belongs to, resolved from the Host header.
+ * acme.APP_DOMAIN -> the "acme" tenant. The bare/root domain, localhost, or an
+ * unknown subdomain fall back to the default tenant (id 1) for now — proper
+ * platform-root + "board not found" handling arrives with the signup/platform step.
+ * Returns the tenant row (always non-null once the DB has a default tenant).
+ */
+function current_tenant(): array
+{
+    static $tenant = null;
+    if ($tenant !== null) return $tenant;
+
+    $host = strtolower(preg_replace('/:\d+$/', '', $_SERVER['HTTP_HOST'] ?? ''));
+    $base = strtolower(APP_DOMAIN);
+    $sub  = null;
+    if ($host !== $base && $host !== 'www.' . $base && str_ends_with($host, '.' . $base)) {
+        $sub = substr($host, 0, -strlen('.' . $base));
+    }
+
+    if ($sub !== null && $sub !== '' && $sub !== 'www') {
+        $stmt = db()->prepare("SELECT * FROM tenants WHERE subdomain = ? LIMIT 1");
+        $stmt->execute([$sub]);
+        $row = $stmt->fetch();
+        if ($row) { $tenant = $row; return $tenant; }
+    }
+    // Fallback (root domain / localhost / unknown subdomain): the default tenant.
+    $tenant = db()->query("SELECT * FROM tenants WHERE id = 1 LIMIT 1")->fetch() ?: ['id' => 1, 'status' => 'active'];
+    return $tenant;
+}
+
+/** The current tenant's id — inject this into every content query. */
+function current_tenant_id(): int
+{
+    return (int) current_tenant()['id'];
+}
+
+/** True when the request is for the platform root domain (no company subdomain). */
+function is_platform_context(): bool
+{
+    $host = strtolower(preg_replace('/:\d+$/', '', $_SERVER['HTTP_HOST'] ?? ''));
+    $base = strtolower(APP_DOMAIN);
+    return $host === $base || $host === 'www.' . $base;
+}
+
 /* ---------- Saved/bookmarked jobs (cookie-based, no visitor accounts) ---------- */
 
 const SAVED_JOBS_COOKIE = 'kastana_saved';
