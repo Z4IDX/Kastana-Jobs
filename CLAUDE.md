@@ -26,7 +26,7 @@ Brand: "Kastana Mena". Palette is blue / yellow / grey (see CSS tokens below).
 3. Import `config/database.sql` (Navicat or phpMyAdmin) — creates DB `kastana_jobs`, tables, seed data, and a default admin.
 4. Open `http://localhost/kastana-jobs/`. Admin: `http://localhost/kastana-jobs/admin/login.php`.
 5. Default admin login: **`admin` / `ChangeMe!2025`** (change via admin → Account).
-6. Existing DB from an earlier version? Run `config/migration_arabic.sql`, `config/migration_uploads.sql`, `config/migration_expiry.sql`, `config/migration_thumbnails.sql`, `config/migration_applicants.sql`, and `config/migration_activity_log.sql` once.
+6. Existing DB from an earlier version? Run `config/migration_arabic.sql`, `config/migration_uploads.sql`, `config/migration_expiry.sql`, `config/migration_thumbnails.sql`, `config/migration_applicants.sql`, `config/migration_activity_log.sql`, and `config/migration_tenancy.sql` once.
 7. `uploads/` must be writable (automatic on Windows/XAMPP; `chmod 775 uploads` on macOS/Linux).
 
 ## File map
@@ -51,6 +51,8 @@ config/
   migration_thumbnails.sql  Adds jobs.thumbnail_path (for existing installs).
   migration_applicants.sql  Creates the applicants table (for existing installs).
   migration_activity_log.sql  Creates the activity_log table (for existing installs).
+  migration_tenancy.sql  Multi-tenancy Phase 1: tenants table + tenant_id on jobs/applicants/
+                     activity_log + admins.role/tenant_id (for existing installs). See docs/MULTITENANCY.md.
   .htaccess          Deny-all (folder not web-accessible).
 
 includes/
@@ -98,17 +100,18 @@ uploads/             User-uploaded images. .htaccess disables code execution her
 ```
 
 ## Database (`kastana_jobs`, utf8mb4)
-- **admins**: id, username (uniq), email (uniq), password_hash (bcrypt), last_login, created_at.
+- **tenants** (multi-tenancy): id, name, subdomain (uniq), status (pending/active/suspended), created_at, activated_at. One company = one tenant, addressed by subdomain. See docs/MULTITENANCY.md.
+- **admins**: id, tenant_id (FK→tenants, NULL = platform super-admin), username, email, password_hash (bcrypt), role (super_admin/company_admin), last_login, created_at. username/email unique **per tenant**.
 - **categories**: id, name, name_ar, slug (uniq), created_at.
-- **jobs**: id, title, title_ar, slug, company_name, company_email, company_website,
+- **jobs**: id, tenant_id (FK→tenants; DEFAULT 1 is transitional until every write sets it), title, title_ar, slug, company_name, company_email, company_website,
   location, location_ar, job_type (ENUM: Full-time, Part-time, Contract, Internship, Remote, Temporary),
   category_id (FK→categories, NULL on delete), salary_min, salary_max, salary_currency,
   description, description_ar, requirements, requirements_ar, how_to_apply, how_to_apply_ar,
   apply_url, image_path, thumbnail_path, status (ENUM: pending, approved, rejected), is_featured,
   expires_at (NULL = never expires), created_at, updated_at, approved_at, approved_by (FK→admins).
 - **login_attempts**: id, ip_address, username, success, attempted_at.
-- **applicants**: id, job_id (FK→jobs, CASCADE on delete), name, email, phone, cover_note, created_at.
-- **activity_log**: id, admin_id (FK→admins, NULL on delete), job_id (FK→jobs, NULL on delete),
+- **applicants**: id, tenant_id (FK→tenants), job_id (FK→jobs, CASCADE on delete), name, email, phone, cover_note, created_at.
+- **activity_log**: id, tenant_id (FK→tenants), admin_id (FK→admins, NULL on delete), job_id (FK→jobs, NULL on delete),
   action, details (snapshot label, survives job deletion), created_at.
 
 Seed: 8 bilingual categories, 1 admin, 2 approved bilingual sample jobs.

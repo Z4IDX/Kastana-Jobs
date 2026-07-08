@@ -88,10 +88,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyInstalled && !$blocking) {
                 $sql = preg_replace('/USE\s+`?\w+`?\s*;/i', '', $sql, 1);
                 $server->exec($sql);
 
-                // 3. Replace the seeded default admin with the one just entered.
+                // 3. Replace the seeded default admin with the platform super-admin just entered.
                 $server->exec('DELETE FROM `admins`');
-                $ins = $server->prepare('INSERT INTO `admins` (username, email, password_hash) VALUES (?,?,?)');
-                $ins->execute([$old['admin_user'], $old['admin_email'], password_hash($adminPass, PASSWORD_BCRYPT, ['cost' => 12])]);
+                $ins = $server->prepare('INSERT INTO `admins` (tenant_id, username, email, password_hash, role) VALUES (NULL,?,?,?,?)');
+                $ins->execute([$old['admin_user'], $old['admin_email'], password_hash($adminPass, PASSWORD_BCRYPT, ['cost' => 12]), 'super_admin']);
 
                 // 4. Write config/config.local.php.
                 $x = fn($v) => var_export($v, true);

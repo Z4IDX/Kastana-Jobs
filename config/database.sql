@@ -12,18 +12,35 @@ USE `kastana_jobs`;
 SET NAMES utf8mb4;
 
 -- ------------------------------------------------------------
---  Admins  (the only accounts on the system)
+--  Tenants  (one company = one tenant, addressed by subdomain)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `tenants` (
+  `id`           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name`         VARCHAR(150) NOT NULL,
+  `subdomain`    VARCHAR(63)  NOT NULL,
+  `status`       ENUM('pending','active','suspended') NOT NULL DEFAULT 'pending',
+  `created_at`   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `activated_at` DATETIME     NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tenant_subdomain` (`subdomain`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+--  Admins  (super-admins run the platform; company admins run a tenant)
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `admins` (
   `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `tenant_id`     INT UNSIGNED NULL DEFAULT NULL,   -- NULL = platform super-admin
   `username`      VARCHAR(50)  NOT NULL,
   `email`         VARCHAR(150) NOT NULL,
   `password_hash` VARCHAR(255) NOT NULL,
+  `role`          ENUM('super_admin','company_admin') NOT NULL DEFAULT 'company_admin',
   `last_login`    DATETIME     NULL DEFAULT NULL,
   `created_at`    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_admin_username` (`username`),
-  UNIQUE KEY `uq_admin_email` (`email`)
+  UNIQUE KEY `uq_admin_tenant_username` (`tenant_id`, `username`),
+  UNIQUE KEY `uq_admin_tenant_email` (`tenant_id`, `email`),
+  CONSTRAINT `fk_admin_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
@@ -44,6 +61,7 @@ CREATE TABLE IF NOT EXISTS `categories` (
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `jobs` (
   `id`              INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `tenant_id`       INT UNSIGNED NOT NULL DEFAULT 1,   -- DEFAULT transitional; every write should set it explicitly
   `title`           VARCHAR(150) NOT NULL,
   `title_ar`        VARCHAR(150) NULL DEFAULT NULL,
   `slug`            VARCHAR(200) NOT NULL,
@@ -77,6 +95,8 @@ CREATE TABLE IF NOT EXISTS `jobs` (
   KEY `idx_status` (`status`),
   KEY `idx_category` (`category_id`),
   KEY `idx_slug` (`slug`),
+  KEY `idx_job_tenant` (`tenant_id`),
+  CONSTRAINT `fk_job_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_job_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_job_admin` FOREIGN KEY (`approved_by`) REFERENCES `admins` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -99,6 +119,7 @@ CREATE TABLE IF NOT EXISTS `login_attempts` (
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `applicants` (
   `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `tenant_id`  INT UNSIGNED NOT NULL DEFAULT 1,
   `job_id`     INT UNSIGNED NOT NULL,
   `name`       VARCHAR(150) NOT NULL,
   `email`      VARCHAR(150) NOT NULL,
@@ -107,6 +128,8 @@ CREATE TABLE IF NOT EXISTS `applicants` (
   `created_at` TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_applicant_job` (`job_id`),
+  KEY `idx_applicant_tenant` (`tenant_id`),
+  CONSTRAINT `fk_applicant_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_applicant_job` FOREIGN KEY (`job_id`) REFERENCES `jobs` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -115,6 +138,7 @@ CREATE TABLE IF NOT EXISTS `applicants` (
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `activity_log` (
   `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `tenant_id`  INT UNSIGNED NOT NULL DEFAULT 1,
   `admin_id`   INT UNSIGNED NULL DEFAULT NULL,
   `job_id`     INT UNSIGNED NULL DEFAULT NULL,
   `action`     VARCHAR(30)  NOT NULL,
@@ -123,6 +147,8 @@ CREATE TABLE IF NOT EXISTS `activity_log` (
   PRIMARY KEY (`id`),
   KEY `idx_activity_created` (`created_at`),
   KEY `idx_activity_job` (`job_id`),
+  KEY `idx_activity_tenant` (`tenant_id`),
+  CONSTRAINT `fk_activity_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_activity_admin` FOREIGN KEY (`admin_id`) REFERENCES `admins` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_activity_job` FOREIGN KEY (`job_id`) REFERENCES `jobs` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -130,6 +156,11 @@ CREATE TABLE IF NOT EXISTS `activity_log` (
 -- ------------------------------------------------------------
 --  Seed data
 -- ------------------------------------------------------------
+-- A default, active tenant that owns the seed data below.
+INSERT INTO `tenants` (`id`, `name`, `subdomain`, `status`, `activated_at`) VALUES
+  (1, 'Default', 'app', 'active', NOW())
+ON DUPLICATE KEY UPDATE `id` = `id`;
+
 INSERT INTO `categories` (`name`, `name_ar`, `slug`) VALUES
   ('Engineering & Development', 'الهندسة والتطوير',   'engineering'),
   ('Design & Creative',         'التصميم والإبداع',   'design'),
@@ -146,9 +177,9 @@ ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `name_ar` = VALUES(`name_ar`);
 --   password: ChangeMe!2025
 -- The hash below is a bcrypt hash of that password.
 -- IMPORTANT: log in and change it immediately (or run create_admin.php).
-INSERT INTO `admins` (`username`, `email`, `password_hash`) VALUES
-  ('admin', 'admin@kastanajobs.local',
-   '$2y$12$WwG9X326a6h/1dM7stoVzuclq3Br0NG08C5vzlT4mbmeXDrCjkQLi')
+INSERT INTO `admins` (`tenant_id`, `username`, `email`, `password_hash`, `role`) VALUES
+  (NULL, 'admin', 'admin@kastanajobs.local',
+   '$2y$12$WwG9X326a6h/1dM7stoVzuclq3Br0NG08C5vzlT4mbmeXDrCjkQLi', 'super_admin')
 ON DUPLICATE KEY UPDATE `username` = VALUES(`username`);
 
 -- A couple of approved sample jobs so the homepage isn't empty on first run.
