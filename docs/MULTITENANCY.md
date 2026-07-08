@@ -66,6 +66,10 @@ Subdomains need a tiny bit of local setup (documented for buyers too):
 - Apache: one virtual host with `ServerAlias *.localhost` (or a `.test` domain) pointing at the project so any subdomain is served. The tenant code reads whatever `Host` sends, so it's environment-agnostic.
 - We'll include the sample vhost snippet in the docs.
 
+## 7a. Public job submission is removed
+
+In the single-board app, companies posted through a public form (`submit.php`) that went into a review queue. In Model B each company posts from **their own tenant admin dashboard** (`admin/edit-job.php`), so the public submission flow is retired: `submit.php`, the header/footer "Post a job" links, and the "For companies" CTA band on the public board are removed. The public board is now purely for job seekers browsing one company's openings. (A "list your company" signup CTA lives on the *platform root*, not on tenant boards.)
+
 ## 8. Explicitly deferred (later phases)
 
 - Per-tenant branding (name/logo/colors from the DB — the white-label config hooks we already built become the fallback).

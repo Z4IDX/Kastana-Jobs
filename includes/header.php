@@ -24,10 +24,8 @@
     </a>
     <nav class="nav">
       <a href="<?= url('index.php') ?>"><?= e(t('nav_browse')) ?></a>
-      <a href="<?= url('index.php#about') ?>"><?= e(t('nav_how')) ?></a>
       <a href="<?= url('saved.php') ?>"><?= e(t('nav_saved')) ?><?php $savedCount = count(saved_job_ids()); if ($savedCount): ?> (<?= $savedCount ?>)<?php endif; ?></a>
       <a href="<?= e(lang_switch_url()) ?>" class="lang-toggle" aria-label="Switch language"><?= e(t('switch_to')) ?></a>
-      <a href="<?= url('submit.php') ?>" class="btn btn--primary btn--sm"><?= e(t('nav_post')) ?></a>
     </nav>
   </div>
 </header>

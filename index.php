@@ -148,17 +148,4 @@ require __DIR__ . '/includes/header.php';
   <?php endif; ?>
 </section>
 
-<section class="wrap cta-band" id="about">
-  <div class="cta-band__inner reveal">
-    <div>
-      <span class="eyebrow" style="color:var(--honey-soft)"><?= e(t('cta_eyebrow')) ?></span>
-      <h2><?= e(t('cta_title')) ?></h2>
-      <p><?= e(t('cta_body')) ?></p>
-    </div>
-    <div class="cta-band__actions">
-      <a href="<?= url('submit.php') ?>" class="btn btn--honey"><?= e(t('cta_btn')) ?> <span class="dir-arrow">→</span></a>
-    </div>
-  </div>
-</section>
-
 <?php require __DIR__ . '/includes/footer.php'; ?>
