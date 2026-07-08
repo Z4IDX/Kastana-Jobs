@@ -24,19 +24,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach (['Accent' => $primary, 'Highlight' => $highlight] as $lbl => $c) {
         if ($c !== '' && !preg_match('/^#[0-9a-fA-F]{6}$/', $c)) $errors[] = "$lbl colour must be a hex value like #1D5C9D (or blank).";
     }
+    foreach (['Website' => 'social_website', 'LinkedIn' => 'social_linkedin', 'X' => 'social_x', 'Instagram' => 'social_instagram'] as $lbl => $k) {
+        $u = input($_POST, $k);
+        if ($u !== '' && !filter_var($u, FILTER_VALIDATE_URL)) $errors[] = "$lbl link must be a valid URL (including https://).";
+    }
 
     // Rebuild the settings blob.
     $set = [
-        'tagline'         => input($_POST, 'tagline'),
-        'highlight_color' => $highlight,
-        'hero_title'      => input($_POST, 'hero_title'),
-        'hero_subtext'    => input($_POST, 'hero_subtext'),
-        'show_stats'      => isset($_POST['show_stats']),
-        'per_page'        => max(1, min(50, (int) ($_POST['per_page'] ?? 12))),
-        'show_salary'     => isset($_POST['show_salary']),
-        'enable_apply'    => isset($_POST['enable_apply']),
-        'enable_saved'    => isset($_POST['enable_saved']),
-        'footer_note'     => input($_POST, 'footer_note'),
+        'tagline'          => input($_POST, 'tagline'),
+        'highlight_color'  => $highlight,
+        'font_theme'       => array_key_exists((string) ($_POST['font_theme'] ?? ''), font_theme_options()) ? $_POST['font_theme'] : 'default',
+        'hero_theme'       => ($_POST['hero_theme'] ?? '') === 'light' ? 'light' : 'dark',
+        'hero_title'       => input($_POST, 'hero_title'),
+        'hero_subtext'     => input($_POST, 'hero_subtext'),
+        'about'            => input($_POST, 'about'),
+        'show_stats'       => isset($_POST['show_stats']),
+        'per_page'         => max(1, min(50, (int) ($_POST['per_page'] ?? 12))),
+        'show_salary'      => isset($_POST['show_salary']),
+        'enable_apply'     => isset($_POST['enable_apply']),
+        'enable_saved'     => isset($_POST['enable_saved']),
+        'footer_note'      => input($_POST, 'footer_note'),
+        'social_website'   => input($_POST, 'social_website'),
+        'social_linkedin'  => input($_POST, 'social_linkedin'),
+        'social_x'         => input($_POST, 'social_x'),
+        'social_instagram' => input($_POST, 'social_instagram'),
     ];
 
     // Logo upload / replace / remove.
@@ -126,6 +137,25 @@ $chk = fn($k, $d = true) => (($set[$k] ?? $d) ? 'checked' : '');
       </div>
     </div>
 
+    <div class="edit-section-title">Typography &amp; layout</div>
+    <div class="field-row">
+      <div class="field">
+        <label>Font style</label>
+        <select name="font_theme">
+          <?php foreach (font_theme_options() as $k => $opt): ?>
+            <option value="<?= e($k) ?>" <?= ($set['font_theme'] ?? 'default') === $k ? 'selected' : '' ?>><?= e($opt['label']) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="field">
+        <label>Hero style</label>
+        <select name="hero_theme">
+          <option value="dark"  <?= ($set['hero_theme'] ?? 'dark') !== 'light' ? 'selected' : '' ?>>Dark (default)</option>
+          <option value="light" <?= ($set['hero_theme'] ?? 'dark') === 'light' ? 'selected' : '' ?>>Light</option>
+        </select>
+      </div>
+    </div>
+
     <div class="edit-section-title">Homepage</div>
     <div class="field">
       <label>Hero headline <span class="hint">(blank = default)</span></label>
@@ -134,6 +164,10 @@ $chk = fn($k, $d = true) => (($set[$k] ?? $d) ? 'checked' : '');
     <div class="field">
       <label>Hero subtext</label>
       <textarea name="hero_subtext" maxlength="400" placeholder="A short line under the headline."><?= $s('hero_subtext') ?></textarea>
+    </div>
+    <div class="field">
+      <label>About section <span class="hint">(optional — shown under the listings)</span></label>
+      <textarea name="about" maxlength="2000" placeholder="Tell candidates about your company."><?= $s('about') ?></textarea>
     </div>
     <div class="field" style="display:flex;align-items:center;gap:0.6rem">
       <input type="checkbox" name="show_stats" id="show_stats" value="1" <?= $chk('show_stats') ?> style="width:auto">
@@ -156,6 +190,16 @@ $chk = fn($k, $d = true) => (($set[$k] ?? $d) ? 'checked' : '');
     <div class="field" style="display:flex;align-items:center;gap:0.6rem">
       <input type="checkbox" name="enable_saved" id="enable_saved" value="1" <?= $chk('enable_saved') ?> style="width:auto">
       <label for="enable_saved" style="margin:0">Let visitors save/bookmark jobs</label>
+    </div>
+
+    <div class="edit-section-title">Social links</div>
+    <div class="field-row">
+      <div class="field"><label>Website</label><input type="url" name="social_website" value="<?= $s('social_website') ?>" placeholder="https://"></div>
+      <div class="field"><label>LinkedIn</label><input type="url" name="social_linkedin" value="<?= $s('social_linkedin') ?>" placeholder="https://"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>X (Twitter)</label><input type="url" name="social_x" value="<?= $s('social_x') ?>" placeholder="https://"></div>
+      <div class="field"><label>Instagram</label><input type="url" name="social_instagram" value="<?= $s('social_instagram') ?>" placeholder="https://"></div>
     </div>
 
     <div class="edit-section-title">Footer</div>

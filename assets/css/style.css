@@ -995,6 +995,25 @@ a { color: inherit; text-decoration: none; }
   border-color: var(--honey-soft);
 }
 
+/* ---- Light hero variant (per-tenant customization option) ---- */
+.hero--light {
+  background:
+    radial-gradient(120% 90% at 85% -10%, rgba(234, 166, 44, 0.18), transparent 55%),
+    linear-gradient(160deg, #ffffff, var(--paper-2));
+  color: var(--ink);
+}
+.hero--light::after { opacity: 0.03; }
+.hero--light .eyebrow { color: var(--chestnut); }
+.hero--light .eyebrow::before { background: var(--chestnut); }
+.hero--light h1 { color: var(--ink); }
+.hero--light h1 em { color: var(--chestnut); }
+.hero--light .hero__lede { color: var(--ink-soft); }
+.hero--light .searchbar { background: #fff; border-color: var(--line-strong); box-shadow: var(--shadow-md); }
+.hero--light .searchbar input { color: var(--ink); }
+.hero--light .searchbar input::placeholder { color: var(--ink-faint); }
+.hero--light .hero__stat b { color: var(--chestnut-deep); }
+.hero--light .hero__stat span { color: var(--ink-faint); }
+
 /* ---------- Uploaded images ---------- */
 .job-card__logo img,
 .job-detail__logo img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }

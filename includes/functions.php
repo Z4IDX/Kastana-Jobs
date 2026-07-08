@@ -361,6 +361,25 @@ function tenant_flag(string $key, bool $default = true): bool
     return !($v === false || $v === '0' || $v === 0 || $v === 'false');
 }
 
+/** Curated font pairings a company can pick from. */
+function font_theme_options(): array
+{
+    return [
+        'default'   => ['label' => 'Chestnut (default)', 'display' => "'Fraunces', Georgia, serif",       'body' => "'Plus Jakarta Sans', system-ui, sans-serif", 'families' => 'Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700'],
+        'modern'    => ['label' => 'Modern',              'display' => "'Space Grotesk', system-ui, sans-serif", 'body' => "'Inter', system-ui, sans-serif",         'families' => 'Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700'],
+        'editorial' => ['label' => 'Editorial',           'display' => "'Playfair Display', Georgia, serif", 'body' => "'Source Sans 3', system-ui, sans-serif", 'families' => 'Playfair+Display:wght@500;600;700&family=Source+Sans+3:wght@400;500;600;700&family=Space+Mono:wght@400;700'],
+        'minimal'   => ['label' => 'Minimal',             'display' => "'Inter', system-ui, sans-serif",   'body' => "'Inter', system-ui, sans-serif",         'families' => 'Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700'],
+    ];
+}
+
+/** The active font pairing for the current tenant. */
+function current_font_theme(): array
+{
+    $themes = font_theme_options();
+    $key = (string) tenant_setting('font_theme', 'default');
+    return $themes[$key] ?? $themes['default'];
+}
+
 /* ---------- Saved/bookmarked jobs (cookie-based, no visitor accounts) ---------- */
 
 const SAVED_JOBS_COOKIE = 'kastana_saved';

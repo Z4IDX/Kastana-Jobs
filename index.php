@@ -69,7 +69,7 @@ $page_title = t('board_title');
 require __DIR__ . '/includes/header.php';
 ?>
 
-<section class="hero">
+<section class="hero <?= tenant_setting('hero_theme') === 'light' ? 'hero--light' : '' ?>">
   <div class="orbs orbs--hero" aria-hidden="true"><span></span><span></span><span></span></div>
   <div class="wrap hero__inner">
     <span class="eyebrow"><?= e(t('hero_eyebrow')) ?></span>
@@ -157,5 +157,12 @@ require __DIR__ . '/includes/header.php';
     </nav>
   <?php endif; ?>
 </section>
+
+<?php if ($about = tenant_setting('about')): ?>
+<section class="wrap" id="about" style="padding-block:clamp(2.5rem,5vw,4rem);max-width:760px">
+  <span class="eyebrow"><?= e(brand_name()) ?></span>
+  <div class="prose" style="margin-top:0.8rem"><?= render_text($about) ?></div>
+</section>
+<?php endif; ?>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

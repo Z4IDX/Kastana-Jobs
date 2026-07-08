@@ -7,7 +7,7 @@ require_once __DIR__ . '/config/config.php';
 
 $reserved = ['www','app','admin','api','mail','ftp','smtp','ns','ns1','ns2','test','static','assets','cdn','blog','help','support','status'];
 $errors = [];
-$old = ['company' => '', 'subdomain' => '', 'admin_user' => '', 'admin_email' => ''];
+$old = ['company' => '', 'subdomain' => '', 'admin_user' => '', 'admin_email' => '', 'primary_color' => '', 'font_theme' => 'default', 'hero_title' => ''];
 $done = false;
 $doneSub = '';
 
@@ -16,10 +16,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (input($_POST, 'website_url') !== '') {          // honeypot
         flash_set('success', 'Thanks!'); redirect('signup.php');
     }
-    $old['company']     = input($_POST, 'company');
-    $old['subdomain']   = strtolower(input($_POST, 'subdomain'));
-    $old['admin_user']  = input($_POST, 'admin_user');
-    $old['admin_email'] = input($_POST, 'admin_email');
+    $old['company']       = input($_POST, 'company');
+    $old['subdomain']     = strtolower(input($_POST, 'subdomain'));
+    $old['admin_user']    = input($_POST, 'admin_user');
+    $old['admin_email']   = input($_POST, 'admin_email');
+    $old['primary_color'] = trim((string) ($_POST['primary_color'] ?? ''));
+    $old['font_theme']    = array_key_exists((string) ($_POST['font_theme'] ?? ''), font_theme_options()) ? $_POST['font_theme'] : 'default';
+    $old['hero_title']    = input($_POST, 'hero_title');
     $pass  = (string) ($_POST['admin_pass'] ?? '');
     $pass2 = (string) ($_POST['admin_pass2'] ?? '');
 
@@ -37,13 +40,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!filter_var($old['admin_email'], FILTER_VALIDATE_EMAIL)) $errors[] = 'A valid admin email is required.';
     if (strlen($pass) < 8) $errors[] = 'Password must be at least 8 characters.';
     if ($pass !== $pass2) $errors[] = 'The two passwords do not match.';
+    if ($old['primary_color'] !== '' && !preg_match('/^#[0-9a-fA-F]{6}$/', $old['primary_color'])) $errors[] = 'Accent colour must be a hex value like #1D5C9D (or blank).';
 
     if (!$errors) {
         try {
+            $initialSettings = array_filter([
+                'font_theme' => $old['font_theme'] !== 'default' ? $old['font_theme'] : null,
+                'hero_title' => $old['hero_title'] !== '' ? $old['hero_title'] : null,
+            ], fn ($x) => $x !== null);
             $pdo = db();
             $pdo->beginTransaction();
-            $pdo->prepare("INSERT INTO tenants (name, subdomain, status) VALUES (?,?,'pending')")
-                ->execute([$old['company'], $old['subdomain']]);
+            $pdo->prepare("INSERT INTO tenants (name, primary_color, settings, subdomain, status) VALUES (?,?,?,?,'pending')")
+                ->execute([
+                    $old['company'],
+                    $old['primary_color'] ?: null,
+                    $initialSettings ? json_encode($initialSettings, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null,
+                    $old['subdomain'],
+                ]);
             $tenantId = (int) $pdo->lastInsertId();
             $pdo->prepare("INSERT INTO admins (tenant_id, username, email, password_hash, role) VALUES (?,?,?,?,'company_admin')")
                 ->execute([$tenantId, $old['admin_user'], $old['admin_email'], password_hash($pass, PASSWORD_BCRYPT, ['cost' => 12])]);
@@ -102,6 +115,30 @@ $v = fn($k) => e($old[$k] ?? '');
             <div class="field"><label>Password <span class="req">*</span> <span class="hint">(min 8)</span></label><input type="password" name="admin_pass" required></div>
             <div class="field"><label>Confirm password <span class="req">*</span></label><input type="password" name="admin_pass2" required></div>
           </div>
+
+          <span class="eyebrow" style="margin:1.6rem 0 0.4rem">Pick your look — optional, change anytime</span>
+          <div class="field-row">
+            <div class="field">
+              <label>Accent colour</label>
+              <div style="display:flex;align-items:center;gap:0.6rem">
+                <span aria-hidden="true" style="width:38px;height:38px;border-radius:8px;border:1px solid var(--line-strong);background:<?= e($old['primary_color'] ?: '#1D5C9D') ?>"></span>
+                <input type="text" name="primary_color" value="<?= e($old['primary_color']) ?>" maxlength="7" placeholder="#1D5C9D" style="max-width:150px">
+              </div>
+            </div>
+            <div class="field">
+              <label>Font style</label>
+              <select name="font_theme">
+                <?php foreach (font_theme_options() as $k => $opt): ?>
+                  <option value="<?= e($k) ?>" <?= $old['font_theme'] === $k ? 'selected' : '' ?>><?= e($opt['label']) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label>Hero headline</label>
+            <input type="text" name="hero_title" value="<?= e($old['hero_title']) ?>" maxlength="120" placeholder="Work worth chasing.">
+          </div>
+
           <button type="submit" class="btn btn--primary btn--block">Create my board</button>
         </form>
       </div>

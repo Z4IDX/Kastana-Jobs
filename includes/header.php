@@ -10,7 +10,8 @@
   <link rel="icon" type="image/svg+xml" href="<?= url('assets/img/favicon.svg') ?>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <?php $fontTheme = current_font_theme(); ?>
+  <link href="https://fonts.googleapis.com/css2?family=<?= $fontTheme['families'] ?>&display=swap" rel="stylesheet">
   <?php if (is_rtl()): ?>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
   <?php endif; ?>
@@ -19,9 +20,10 @@
     $bc = brand_color();
     $hc = tenant_setting('highlight_color');
     $hcOk = is_string($hc) && preg_match('/^#[0-9a-fA-F]{6}$/', $hc);
+    $customFont = tenant_setting('font_theme', 'default') !== 'default';
   ?>
-  <?php if ($bc || $hcOk): ?>
-  <style>:root{<?php if ($bc): ?> --chestnut: <?= e($bc) ?>;<?php endif; ?><?php if ($hcOk): ?> --honey: <?= e($hc) ?>;<?php endif; ?> }</style>
+  <?php if ($bc || $hcOk || $customFont): ?>
+  <style>:root{<?php if ($bc): ?> --chestnut: <?= e($bc) ?>;<?php endif; ?><?php if ($hcOk): ?> --honey: <?= e($hc) ?>;<?php endif; ?><?php if ($customFont): ?> --font-display: <?= $fontTheme['display'] ?>; --font-body: <?= $fontTheme['body'] ?>;<?php endif; ?> }</style>
   <?php endif; ?>
 </head>
 <body>
