@@ -224,33 +224,69 @@ function query_url(array $overrides): string
  * platform-root + "board not found" handling arrives with the signup/platform step.
  * Returns the tenant row (always non-null once the DB has a default tenant).
  */
-function current_tenant(): array
+/**
+ * Resolve the company for this request from the Host header.
+ * Returns: the tenant row (a resolved subdomain, or localhost in dev);
+ *          null  = the platform root domain (no company);
+ *          false = a subdomain that doesn't match any tenant.
+ */
+function current_tenant()
 {
+    static $computed = false;
     static $tenant = null;
-    if ($tenant !== null) return $tenant;
+    if ($computed) return $tenant;
+    $computed = true;
 
     $host = strtolower(preg_replace('/:\d+$/', '', $_SERVER['HTTP_HOST'] ?? ''));
     $base = strtolower(APP_DOMAIN);
-    $sub  = null;
-    if ($host !== $base && $host !== 'www.' . $base && str_ends_with($host, '.' . $base)) {
-        $sub = substr($host, 0, -strlen('.' . $base));
-    }
 
-    if ($sub !== null && $sub !== '' && $sub !== 'www') {
-        $stmt = db()->prepare("SELECT * FROM tenants WHERE subdomain = ? LIMIT 1");
-        $stmt->execute([$sub]);
-        $row = $stmt->fetch();
-        if ($row) { $tenant = $row; return $tenant; }
+    if ($host === $base || $host === 'www.' . $base) {
+        $tenant = null;                       // platform root
+        return $tenant;
     }
-    // Fallback (root domain / localhost / unknown subdomain): the default tenant.
-    $tenant = db()->query("SELECT * FROM tenants WHERE id = 1 LIMIT 1")->fetch() ?: ['id' => 1, 'status' => 'active'];
+    if ($host === 'localhost' || $host === '127.0.0.1') {
+        $tenant = db()->query("SELECT * FROM tenants WHERE id = 1 LIMIT 1")->fetch() ?: null;
+        return $tenant;                        // dev convenience: the default tenant
+    }
+    if (str_ends_with($host, '.' . $base)) {
+        $sub = substr($host, 0, -strlen('.' . $base));
+        if ($sub !== '' && $sub !== 'www') {
+            $stmt = db()->prepare("SELECT * FROM tenants WHERE subdomain = ? LIMIT 1");
+            $stmt->execute([$sub]);
+            $tenant = $stmt->fetch() ?: false; // false = unknown subdomain
+            return $tenant;
+        }
+    }
+    $tenant = null;                            // unrecognized host → treat as platform
     return $tenant;
 }
 
-/** The current tenant's id — inject this into every content query. */
+/** The current tenant's id (0 when there is no concrete tenant — platform/unknown). */
 function current_tenant_id(): int
 {
-    return (int) current_tenant()['id'];
+    $t = current_tenant();
+    return is_array($t) ? (int) $t['id'] : 0;
+}
+
+/**
+ * Guard for public tenant pages. On the platform root shows the platform home;
+ * for an unknown or not-yet-active subdomain shows a themed page; otherwise
+ * returns the active tenant row.
+ */
+function require_active_tenant(): array
+{
+    if (is_platform_context()) {
+        require dirname(__DIR__) . '/platform-home.php';
+        exit;
+    }
+    $t = current_tenant();
+    if (is_array($t) && ($t['status'] ?? '') === 'active') {
+        return $t;
+    }
+    http_response_code(404);
+    $notFound = ($t === false);   // used by the view
+    require dirname(__DIR__) . '/tenant-unavailable.php';
+    exit;
 }
 
 /** True when the request is for the platform root domain (no company subdomain). */

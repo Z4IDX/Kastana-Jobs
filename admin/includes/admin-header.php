@@ -18,13 +18,17 @@ require_login(); // every admin page is guarded
 <body>
 <div class="admin-bar">
   <div class="wrap admin-bar__inner">
-    <a href="<?= url('admin/dashboard.php') ?>" class="admin-brand"><?= e(APP_NAME) ?><span class="dot">.</span>Admin</a>
+    <?php $isSuper = current_admin_role() === 'super_admin'; ?>
+    <a href="<?= url($isSuper ? 'admin/tenants.php' : 'admin/dashboard.php') ?>" class="admin-brand"><?= e(APP_NAME) ?><span class="dot">.</span>Admin</a>
     <div class="admin-bar__right">
       <span class="who"><?= e($_SESSION['admin_username'] ?? '') ?></span>
-      <?php if (current_admin_role() === 'super_admin'): ?>
+      <?php if ($isSuper): ?>
+        <a href="<?= url('admin/tenants.php') ?>" class="linkout">Companies</a>
         <a href="<?= url('admin/categories.php') ?>" class="linkout">Categories</a>
+      <?php else: ?>
+        <a href="<?= url('admin/dashboard.php') ?>" class="linkout">Dashboard</a>
+        <a href="<?= url('admin/activity-log.php') ?>" class="linkout">Activity log</a>
       <?php endif; ?>
-      <a href="<?= url('admin/activity-log.php') ?>" class="linkout">Activity log</a>
       <a href="<?= url('admin/account.php') ?>" class="linkout">Account</a>
       <a href="<?= url('index.php') ?>" target="_blank" class="linkout">View site ↗</a>
       <a href="<?= url('admin/logout.php') ?>" class="btn btn--ghost btn--sm" style="color:#fdf6ec;border-color:rgba(255,255,255,0.3)">Sign out</a>

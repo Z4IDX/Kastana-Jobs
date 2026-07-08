@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/config/config.php';
+require_active_tenant();
 
 $ids = saved_job_ids();
 $jobs = [];

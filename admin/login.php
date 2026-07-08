@@ -1,9 +1,9 @@
 <?php
 require_once __DIR__ . '/../config/config.php';
 
-// Already signed in? Go to the dashboard.
+// Already signed in? Go to the right home for the role.
 if (is_logged_in()) {
-    redirect('admin/dashboard.php');
+    redirect(($_SESSION['admin_role'] ?? '') === 'super_admin' ? 'admin/tenants.php' : 'admin/dashboard.php');
 }
 
 $error = '';
@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ->execute([$admin['id']]);
 
             login_admin($admin);
-            redirect('admin/dashboard.php');
+            redirect($admin['role'] === 'super_admin' ? 'admin/tenants.php' : 'admin/dashboard.php');
         } else {
             password_verify($password, $dummyHash); // equalize timing
             record_login_attempt($ip, $username, false);

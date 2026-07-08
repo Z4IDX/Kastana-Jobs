@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/config/config.php';
+require_active_tenant(); // platform root -> landing; unknown/inactive subdomain -> themed 404
 
 $perPage = 12;
 $page = max(1, (int)($_GET['page'] ?? 1));
