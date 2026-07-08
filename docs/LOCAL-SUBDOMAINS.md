@@ -34,7 +34,37 @@ The Windows hosts file has no wildcards, so add one line per subdomain you want 
 127.0.0.1 globex.kastana.test
 ```
 
-(For automatic wildcard resolution instead of per-name lines, install **Acrylic DNS Proxy** and map `*.kastana.test → 127.0.0.1` — optional.)
+The hosts file is fine for a couple of fixed test companies, but **companies sign up with any subdomain they choose**, so you'd have to add a line for every new signup. For real multi-tenant testing, use wildcard resolution instead (next section).
+
+## 2b. Wildcard resolution with Acrylic DNS Proxy (recommended)
+
+[Acrylic DNS Proxy](https://mayakron.altervista.org/support/acrylic/Home.htm) is a local DNS server that **does** support wildcards, so `*.kastana.test` resolves automatically — every new company's board just works, no hosts edits. This mirrors how production behaves.
+
+**1. Install** Acrylic DNS Proxy (Windows installer from the link above).
+
+**2. Add a wildcard entry.** Open `C:\Program Files (x86)\Acrylic DNS Proxy\AcrylicHosts.txt` **as Administrator** and add:
+
+```
+127.0.0.1 kastana.test
+127.0.0.1 *.kastana.test
+```
+
+(The `*` wildcard is the whole point — one line covers `acme.kastana.test`, `zaidjo.kastana.test`, and any future signup.)
+
+**3. Restart the Acrylic service.** Use the Start-menu shortcut **"Restart Acrylic Service"** (installed with Acrylic).
+
+**4. Point Windows at Acrylic.** Set your network adapter's DNS server to `127.0.0.1`:
+Settings → Network & Internet → your adapter → Edit DNS → Manual → IPv4 on → **Preferred DNS: `127.0.0.1`**. (Acrylic listens on `127.0.0.1:53`.)
+
+**5. Flush the cache:**
+
+```
+ipconfig /flushdns
+```
+
+Now open `http://anything.kastana.test/` and it resolves with no per-name setup. You can remove the individual `*.kastana.test` lines from the Windows hosts file — Acrylic handles them. (Keep the plain `kastana.test` line in either place if you like.)
+
+> Troubleshooting: if names still don't resolve, confirm the Acrylic service is running (Services → "Acrylic DNS Proxy Service"), that the adapter's DNS is `127.0.0.1`, and re-run `ipconfig /flushdns`. To undo, set the adapter's DNS back to Automatic (DHCP).
 
 ## 3. Config
 
