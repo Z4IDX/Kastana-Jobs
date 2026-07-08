@@ -88,6 +88,15 @@ function translations(): array
             'save_job'         => 'Save this role',
             'unsave_job'       => 'Remove from saved',
 
+            'a_dashboard'      => 'Dashboard',
+            'a_customize'      => 'Customize',
+            'a_activity'       => 'Activity log',
+            'a_companies'      => 'Companies',
+            'a_categories'     => 'Categories',
+            'a_account'        => 'Account',
+            'a_signout'        => 'Sign out',
+            'a_viewsite'       => 'View site',
+
             'f_intro_eyebrow'  => 'For companies',
             'f_post_title'     => 'Post a role',
             'f_post_lede'      => 'Fill in the details below. A human reviews every submission — once approved, your role goes live on the board. No account required.',
@@ -234,6 +243,15 @@ function translations(): array
             'saved_empty_body'  => 'اضغط على النجمة في أي وظيفة لحفظها هنا.',
             'save_job'         => 'احفظ هذه الوظيفة',
             'unsave_job'       => 'إزالة من المحفوظات',
+
+            'a_dashboard'      => 'لوحة التحكم',
+            'a_customize'      => 'تخصيص',
+            'a_activity'       => 'سجل النشاط',
+            'a_companies'      => 'الشركات',
+            'a_categories'     => 'الفئات',
+            'a_account'        => 'الحساب',
+            'a_signout'        => 'تسجيل الخروج',
+            'a_viewsite'       => 'عرض الموقع',
 
             'f_intro_eyebrow'  => 'للشركات',
             'f_post_title'     => 'أضف وظيفة',

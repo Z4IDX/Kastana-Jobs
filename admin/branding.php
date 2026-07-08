@@ -84,8 +84,31 @@ $s = fn($k, $d = '') => e((string) ($set[$k] ?? $d));
 $chk = fn($k, $d = true) => (($set[$k] ?? $d) ? 'checked' : '');
 ?>
 <div class="page-head">
-  <div><h1>Customize your board</h1><p>Make it yours. Blank fields fall back to sensible defaults.</p></div>
+  <div><h1>Customize your board</h1><p>Make it yours. The preview updates as you type. Blank fields fall back to sensible defaults.</p></div>
   <a href="<?= url('index.php') ?>" target="_blank" class="btn btn--ghost">View board ↗</a>
+</div>
+
+<style>
+  .brand-preview{--pc:<?= $v('primary_color') ?: '#1D5C9D' ?>;--hl:<?= $s('highlight_color') ?: '#EAA62C' ?>;--bp-font:'Fraunces',serif;border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:1.4rem;box-shadow:var(--shadow-sm)}
+  .brand-preview .bp-tagline{font-family:var(--font-mono);font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-faint);padding:0.5rem 1rem 0;background:#fff}
+  .bp-header{display:flex;align-items:center;gap:0.5rem;padding:0.7rem 1rem;background:#fff;border-bottom:1px solid var(--line)}
+  .bp-logo{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;background:var(--pc);color:#fff;font-weight:700;font-size:0.8rem}
+  .bp-name{font-family:var(--bp-font);font-weight:700}
+  .bp-hero{padding:1.7rem 1rem;text-align:center;background:linear-gradient(160deg,var(--chestnut-deep),#24120a);color:#fff}
+  .brand-preview.bp--light .bp-hero{background:linear-gradient(160deg,#fff,var(--paper-2));color:var(--ink)}
+  .bp-hero-title{font-family:var(--bp-font);font-size:1.25rem;line-height:1.15;margin:0 0 0.8rem}
+  .bp-btn{display:inline-block;background:var(--hl);color:#1a1a1a;padding:0.4rem 1rem;border-radius:999px;font-size:0.8rem;font-weight:700}
+  .bp-card{display:flex;flex-wrap:wrap;gap:0.4rem;align-items:center;padding:0.9rem 1rem;background:#fff}
+  .bp-card b{font-family:var(--bp-font);margin-inline-end:auto}
+  .bp-tag{font-size:0.72rem;padding:0.25rem 0.6rem;border-radius:999px;background:var(--paper-2);color:var(--ink-soft)}
+  .bp-tag--hl{background:var(--hl);color:#1a1a1a}
+  .bp-link{color:var(--pc);font-size:0.78rem;font-weight:600}
+</style>
+<div class="brand-preview" id="brand-preview" aria-label="Live preview">
+  <div class="bp-tagline">Live preview</div>
+  <div class="bp-header"><span class="bp-logo">A</span><span class="bp-name">Brand</span></div>
+  <div class="bp-hero"><h4 class="bp-hero-title">Work worth chasing.</h4><span class="bp-btn">Search</span></div>
+  <div class="bp-card"><b>Product Designer</b><span class="bp-tag">Full-time</span><span class="bp-tag bp-tag--hl">$60k–$90k</span><span class="bp-link">View role →</span></div>
 </div>
 
 <?php foreach (flash_get() as $f): ?><div class="alert alert--<?= e($f['type']) ?>"><?= e($f['message']) ?></div><?php endforeach; ?>
