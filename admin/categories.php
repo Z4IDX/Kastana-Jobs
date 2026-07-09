@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/config.php';
-require_super_admin(); // categories are a shared, platform-managed taxonomy
+require_login();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_csrf();

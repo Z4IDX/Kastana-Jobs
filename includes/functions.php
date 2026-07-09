@@ -91,7 +91,7 @@ function flash_get(): array
     return $flash;
 }
 
-/* ---------- Authentication ---------- */
+/* ---------- Authentication: platform admins (staff) ---------- */
 
 function is_logged_in(): bool
 {
@@ -101,12 +101,11 @@ function is_logged_in(): bool
 /** Guard for admin pages — redirects to login if not authenticated. */
 function require_login(): void
 {
-    // Auto-logout after inactivity.
     if (is_logged_in()) {
         $idle = time() - ($_SESSION['last_activity'] ?? time());
         if ($idle > SESSION_TIMEOUT_MIN * 60) {
-            logout_admin();
-            flash_set('info', 'You were signed out after a period of inactivity.');
+            logout_session();
+            flash_set('info', t('ad_idle_logout'));
             redirect('admin/login.php');
         }
         $_SESSION['last_activity'] = time();
@@ -114,48 +113,64 @@ function require_login(): void
     if (!is_logged_in()) {
         redirect('admin/login.php');
     }
-
-    // Tenant-context enforcement: a company admin's session is only valid on
-    // its own subdomain; a super-admin's only in the super-admin zone. This
-    // stops a session from being replayed in the wrong context.
-    $role = $_SESSION['admin_role'] ?? 'company_admin';
-    $ok = ($role === 'super_admin')
-        ? is_super_admin_zone()
-        : (!is_super_admin_zone() && (int) ($_SESSION['admin_tenant_id'] ?? 0) === current_tenant_id());
-    if (!$ok) {
-        logout_admin();
-        flash_set('error', 'Please sign in for this site.');
-        redirect('admin/login.php');
-    }
-}
-
-/** Guard for platform-owner-only pages. */
-function require_super_admin(): void
-{
-    require_login();
-    if (($_SESSION['admin_role'] ?? '') !== 'super_admin') {
-        http_response_code(403);
-        exit('Forbidden.');
-    }
-}
-
-function current_admin_role(): string
-{
-    return (string) ($_SESSION['admin_role'] ?? 'company_admin');
 }
 
 function login_admin(array $admin): void
 {
-    // Prevent session fixation — new ID on privilege change.
-    session_regenerate_id(true);
-    $_SESSION['admin_id']        = (int) $admin['id'];
-    $_SESSION['admin_username']  = $admin['username'];
-    $_SESSION['admin_role']      = $admin['role'] ?? 'company_admin';
-    $_SESSION['admin_tenant_id'] = isset($admin['tenant_id']) ? (int) $admin['tenant_id'] : null;
-    $_SESSION['last_activity']   = time();
+    session_regenerate_id(true);           // prevent session fixation
+    $_SESSION = [];                        // never mix an admin + employer session
+    $_SESSION['admin_id']       = (int) $admin['id'];
+    $_SESSION['admin_username'] = $admin['username'];
+    $_SESSION['last_activity']  = time();
 }
 
-function logout_admin(): void
+function current_admin_id(): int
+{
+    return (int) ($_SESSION['admin_id'] ?? 0);
+}
+
+/* ---------- Authentication: employers (self-service posters) ---------- */
+
+function is_employer_logged_in(): bool
+{
+    return !empty($_SESSION['employer_id']);
+}
+
+/** Guard for employer pages — redirects to the employer login. */
+function require_employer(): void
+{
+    if (is_employer_logged_in()) {
+        $idle = time() - ($_SESSION['last_activity'] ?? time());
+        if ($idle > SESSION_TIMEOUT_MIN * 60) {
+            logout_session();
+            flash_set('info', t('ad_idle_logout'));
+            redirect('login.php');
+        }
+        $_SESSION['last_activity'] = time();
+    }
+    if (!is_employer_logged_in()) {
+        redirect('login.php');
+    }
+}
+
+function login_employer(array $employer): void
+{
+    session_regenerate_id(true);
+    $_SESSION = [];                        // never mix an employer + admin session
+    $_SESSION['employer_id']   = (int) $employer['id'];
+    $_SESSION['employer_name'] = $employer['company_name'];
+    $_SESSION['last_activity'] = time();
+}
+
+function current_employer_id(): int
+{
+    return (int) ($_SESSION['employer_id'] ?? 0);
+}
+
+/* ---------- Shared logout ---------- */
+
+/** Destroy the whole session (used by both admin and employer logout). */
+function logout_session(): void
 {
     $_SESSION = [];
     if (ini_get('session.use_cookies')) {
@@ -166,10 +181,8 @@ function logout_admin(): void
     session_destroy();
 }
 
-function current_admin_id(): int
-{
-    return (int) ($_SESSION['admin_id'] ?? 0);
-}
+/** Back-compat alias. */
+function logout_admin(): void { logout_session(); }
 
 /* ---------- Brute-force / rate limiting for login ---------- */
 
@@ -215,171 +228,6 @@ function query_url(array $overrides): string
     return $path . '?' . http_build_query($q);
 }
 
-/* ---------- Multi-tenancy: resolve the current company from the subdomain ---------- */
-
-/**
- * The tenant (company) this request belongs to, resolved from the Host header.
- * acme.APP_DOMAIN -> the "acme" tenant. The bare/root domain, localhost, or an
- * unknown subdomain fall back to the default tenant (id 1) for now — proper
- * platform-root + "board not found" handling arrives with the signup/platform step.
- * Returns the tenant row (always non-null once the DB has a default tenant).
- */
-/**
- * Resolve the company for this request from the Host header.
- * Returns: the tenant row (a resolved subdomain, or localhost in dev);
- *          null  = the platform root domain (no company);
- *          false = a subdomain that doesn't match any tenant.
- */
-function current_tenant()
-{
-    static $computed = false;
-    static $tenant = null;
-    if ($computed) return $tenant;
-    $computed = true;
-
-    $host = strtolower(preg_replace('/:\d+$/', '', $_SERVER['HTTP_HOST'] ?? ''));
-    $base = strtolower(APP_DOMAIN);
-
-    if ($host === $base || $host === 'www.' . $base) {
-        $tenant = null;                       // platform root
-        return $tenant;
-    }
-    if ($host === 'localhost' || $host === '127.0.0.1') {
-        $tenant = db()->query("SELECT * FROM tenants WHERE id = 1 LIMIT 1")->fetch() ?: null;
-        return $tenant;                        // dev convenience: the default tenant
-    }
-    if (str_ends_with($host, '.' . $base)) {
-        $sub = substr($host, 0, -strlen('.' . $base));
-        if ($sub !== '' && $sub !== 'www') {
-            $stmt = db()->prepare("SELECT * FROM tenants WHERE subdomain = ? LIMIT 1");
-            $stmt->execute([$sub]);
-            $tenant = $stmt->fetch() ?: false; // false = unknown subdomain
-            return $tenant;
-        }
-    }
-    $tenant = null;                            // unrecognized host → treat as platform
-    return $tenant;
-}
-
-/** The current tenant's id (0 when there is no concrete tenant — platform/unknown). */
-function current_tenant_id(): int
-{
-    $t = current_tenant();
-    return is_array($t) ? (int) $t['id'] : 0;
-}
-
-/**
- * Guard for public tenant pages. On the platform root shows the platform home;
- * for an unknown or not-yet-active subdomain shows a themed page; otherwise
- * returns the active tenant row.
- */
-function require_active_tenant(): array
-{
-    if (is_platform_context()) {
-        require dirname(__DIR__) . '/platform-home.php';
-        exit;
-    }
-    $t = current_tenant();
-    if (is_array($t) && ($t['status'] ?? '') === 'active') {
-        return $t;
-    }
-    http_response_code(404);
-    $notFound = ($t === false);   // used by the view
-    require dirname(__DIR__) . '/tenant-unavailable.php';
-    exit;
-}
-
-/** True when the request is for the platform root domain (no company subdomain). */
-function is_platform_context(): bool
-{
-    $host = strtolower(preg_replace('/:\d+$/', '', $_SERVER['HTTP_HOST'] ?? ''));
-    $base = strtolower(APP_DOMAIN);
-    return $host === $base || $host === 'www.' . $base;
-}
-
-/**
- * The "super-admin zone" is where the platform owner signs in and works:
- * the root domain, plus localhost/127.0.0.1 for local development. Company
- * admins sign in on their own subdomain instead.
- */
-function is_super_admin_zone(): bool
-{
-    $host = strtolower(preg_replace('/:\d+$/', '', $_SERVER['HTTP_HOST'] ?? ''));
-    return is_platform_context() || $host === 'localhost' || $host === '127.0.0.1';
-}
-
-/* ---------- Per-tenant branding (falls back to the platform defaults) ---------- */
-
-/** The brand name to display: tenant's brand_name, else its name, else APP_NAME. */
-function brand_name(): string
-{
-    $t = current_tenant();
-    if (is_array($t)) {
-        if (trim((string) ($t['brand_name'] ?? '')) !== '') return $t['brand_name'];
-        if (trim((string) ($t['name'] ?? '')) !== '')       return $t['name'];
-    }
-    return APP_NAME;
-}
-
-/** URL of the logo to show: the tenant's uploaded logo, else the default logo. */
-function brand_logo_url(): string
-{
-    $t = current_tenant();
-    if (is_array($t) && !empty($t['logo_path'])) return url($t['logo_path']);
-    return url('assets/img/logo.png');
-}
-
-/** The tenant's #rrggbb accent colour, or null to use the default palette. */
-function brand_color(): ?string
-{
-    $t = current_tenant();
-    $c = is_array($t) ? (string) ($t['primary_color'] ?? '') : '';
-    return preg_match('/^#[0-9a-fA-F]{6}$/', $c) ? $c : null;
-}
-
-/**
- * Read one of the current tenant's customization options from its settings JSON,
- * returning $default when unset. Decoded once per request.
- */
-function tenant_setting(string $key, $default = null)
-{
-    static $cache = null;
-    if ($cache === null) {
-        $t = current_tenant();
-        $raw = is_array($t) ? (string) ($t['settings'] ?? '') : '';
-        $cache = $raw !== '' ? (json_decode($raw, true) ?: []) : [];
-    }
-    if (!array_key_exists($key, $cache)) return $default;
-    $v = $cache[$key];
-    return ($v === '' && $default !== null) ? $default : $v;
-}
-
-/** Convenience for boolean toggles (default true unless explicitly false). */
-function tenant_flag(string $key, bool $default = true): bool
-{
-    $v = tenant_setting($key, $default);
-    return !($v === false || $v === '0' || $v === 0 || $v === 'false');
-}
-
-/** Curated font pairings a company can pick from. */
-function font_theme_options(): array
-{
-    return [
-        'default'   => ['label' => 'Chestnut (default)', 'display' => "'Fraunces', Georgia, serif",       'body' => "'Plus Jakarta Sans', system-ui, sans-serif", 'families' => 'Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700'],
-        'modern'    => ['label' => 'Modern',              'display' => "'Space Grotesk', system-ui, sans-serif", 'body' => "'Inter', system-ui, sans-serif",         'families' => 'Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700'],
-        'editorial' => ['label' => 'Editorial',           'display' => "'Playfair Display', Georgia, serif", 'body' => "'Source Sans 3', system-ui, sans-serif", 'families' => 'Playfair+Display:wght@500;600;700&family=Source+Sans+3:wght@400;500;600;700&family=Space+Mono:wght@400;700'],
-        'minimal'   => ['label' => 'Minimal',             'display' => "'Inter', system-ui, sans-serif",   'body' => "'Inter', system-ui, sans-serif",         'families' => 'Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700'],
-    ];
-}
-
-/** The active font pairing for the current tenant. */
-function current_font_theme(): array
-{
-    $themes = font_theme_options();
-    $key = (string) tenant_setting('font_theme', 'default');
-    return $themes[$key] ?? $themes['default'];
-}
-
 /* ---------- Saved/bookmarked jobs (cookie-based, no visitor accounts) ---------- */
 
 const SAVED_JOBS_COOKIE = 'kastana_saved';
@@ -412,13 +260,37 @@ function toggle_saved_job(int $jobId, bool $save): void
     ]);
 }
 
+/* ---------- Employer notifications (on-site, no email) ---------- */
+
+/** Queue an on-site notification for an employer about one of their postings. */
+function notify_employer(int $employerId, ?int $jobId, string $type, ?string $title): void
+{
+    if ($employerId <= 0) return;
+    db()->prepare("INSERT INTO notifications (employer_id, job_id, type, title) VALUES (?,?,?,?)")
+        ->execute([$employerId, $jobId, $type, $title]);
+}
+
+/** Unread notifications for an employer (most recent first). */
+function unread_notifications(int $employerId): array
+{
+    $stmt = db()->prepare("SELECT * FROM notifications WHERE employer_id = ? AND is_read = 0 ORDER BY created_at DESC");
+    $stmt->execute([$employerId]);
+    return $stmt->fetchAll();
+}
+
+/** Mark all of an employer's notifications as read. */
+function mark_notifications_read(int $employerId): void
+{
+    db()->prepare("UPDATE notifications SET is_read = 1 WHERE employer_id = ? AND is_read = 0")->execute([$employerId]);
+}
+
 /* ---------- Admin activity log ---------- */
 
 /** Record an admin action against a posting (job_id may be null after deletion). */
 function log_activity(?int $jobId, string $action, ?string $details = null): void
 {
-    db()->prepare("INSERT INTO activity_log (tenant_id, admin_id, job_id, action, details) VALUES (?,?,?,?,?)")
-        ->execute([current_tenant_id(), current_admin_id() ?: null, $jobId, $action, $details]);
+    db()->prepare("INSERT INTO activity_log (admin_id, job_id, action, details) VALUES (?,?,?,?)")
+        ->execute([current_admin_id() ?: null, $jobId, $action, $details]);
 }
 
 /* ---------- Formatting ---------- */

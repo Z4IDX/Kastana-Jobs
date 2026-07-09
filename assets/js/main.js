@@ -22,12 +22,26 @@
     reveals.forEach((el) => el.classList.add('is-visible'));
   }
 
-  /* ---------- Sort auto-submit (works fine without JS too) ---------- */
-  const sortSelect = document.getElementById('sort-select');
-  if (sortSelect && sortSelect.form) {
-    sortSelect.form.classList.add('js-enhanced'); // hides the now-redundant Apply button
-    sortSelect.addEventListener('change', () => sortSelect.form.submit());
+  /* ---------- Filter/sort auto-submit (works fine without JS too) ---------- */
+  const filterForm = document.getElementById('filter-form');
+  if (filterForm) {
+    filterForm.classList.add('js-enhanced'); // hides the now-redundant Apply button
+    filterForm.querySelectorAll('select').forEach(function (sel) {
+      sel.addEventListener('change', function () { filterForm.submit(); });
+    });
   }
+
+  /* ---------- Notification toasts (dismiss + auto-hide) ---------- */
+  var toasts = document.querySelectorAll('#toast-stack .toast');
+  toasts.forEach(function (toast) {
+    var dismiss = function () {
+      toast.classList.add('is-leaving');
+      setTimeout(function () { toast.remove(); }, 300);
+    };
+    var closeBtn = toast.querySelector('.toast__close');
+    if (closeBtn) closeBtn.addEventListener('click', dismiss);
+    setTimeout(dismiss, 8000); // auto-hide after 8s
+  });
 
   /* ---------- Copy apply link ---------- */
   const copyBtn = document.getElementById('copy-apply-link');

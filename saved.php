@@ -1,6 +1,5 @@
 <?php
 require_once __DIR__ . '/config/config.php';
-require_active_tenant();
 
 $ids = saved_job_ids();
 $jobs = [];
@@ -9,11 +8,11 @@ if ($ids) {
     $stmt = db()->prepare(
         "SELECT j.*, c.name AS category_name, c.name_ar AS category_name_ar, c.slug AS category_slug
          FROM jobs j LEFT JOIN categories c ON c.id=j.category_id
-         WHERE j.id IN ($placeholders) AND j.tenant_id = ? AND j.status='approved'
+         WHERE j.id IN ($placeholders) AND j.status='approved'
            AND (j.expires_at IS NULL OR j.expires_at >= CURDATE())
          ORDER BY j.created_at DESC"
     );
-    $stmt->execute([...$ids, current_tenant_id()]);
+    $stmt->execute($ids);
     $jobs = $stmt->fetchAll();
 }
 

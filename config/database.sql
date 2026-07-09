@@ -1,5 +1,5 @@
 -- ============================================================
---  Kastana Jobs — Database Schema
+--  Kastana Jobs — Database Schema (single-site, employer accounts)
 --  Import this file into MySQL/MariaDB (via Navicat or phpMyAdmin)
 --  It creates the database, all tables, and a default admin.
 -- ============================================================
@@ -12,39 +12,37 @@ USE `kastana_jobs`;
 SET NAMES utf8mb4;
 
 -- ------------------------------------------------------------
---  Tenants  (one company = one tenant, addressed by subdomain)
--- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `tenants` (
-  `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `name`          VARCHAR(150) NOT NULL,
-  `brand_name`    VARCHAR(150) NULL DEFAULT NULL,   -- optional display name (else `name`)
-  `logo_path`     VARCHAR(255) NULL DEFAULT NULL,   -- optional logo (else default logo)
-  `primary_color` VARCHAR(7)   NULL DEFAULT NULL,   -- optional #rrggbb accent (else default)
-  `settings`      TEXT         NULL DEFAULT NULL,   -- JSON of customization options (see tenant_setting())
-  `subdomain`     VARCHAR(63)  NOT NULL,
-  `status`        ENUM('pending','active','suspended') NOT NULL DEFAULT 'pending',
-  `created_at`    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `activated_at`  DATETIME     NULL DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_tenant_subdomain` (`subdomain`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- ------------------------------------------------------------
---  Admins  (super-admins run the platform; company admins run a tenant)
+--  Admins  (platform staff who review and manage postings)
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `admins` (
   `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `tenant_id`     INT UNSIGNED NULL DEFAULT NULL,   -- NULL = platform super-admin
   `username`      VARCHAR(50)  NOT NULL,
   `email`         VARCHAR(150) NOT NULL,
   `password_hash` VARCHAR(255) NOT NULL,
-  `role`          ENUM('super_admin','company_admin') NOT NULL DEFAULT 'company_admin',
   `last_login`    DATETIME     NULL DEFAULT NULL,
   `created_at`    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_admin_tenant_username` (`tenant_id`, `username`),
-  UNIQUE KEY `uq_admin_tenant_email` (`tenant_id`, `email`),
-  CONSTRAINT `fk_admin_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE
+  UNIQUE KEY `uq_admin_username` (`username`),
+  UNIQUE KEY `uq_admin_email` (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+--  Employers  (companies that self-register and post jobs)
+--  Kept separate from `admins`: open self-registration must never
+--  share a table with privileged staff accounts.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `employers` (
+  `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `company_name`  VARCHAR(150) NOT NULL,
+  `email`         VARCHAR(150) NOT NULL,
+  `password_hash` VARCHAR(255) NOT NULL,
+  `phone`         VARCHAR(40)  NULL DEFAULT NULL,
+  `website`       VARCHAR(255) NULL DEFAULT NULL,
+  `status`        ENUM('active','suspended') NOT NULL DEFAULT 'active',
+  `last_login`    DATETIME     NULL DEFAULT NULL,
+  `created_at`    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_employer_email` (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
@@ -61,16 +59,17 @@ CREATE TABLE IF NOT EXISTS `categories` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
---  Jobs
+--  Jobs  (owned by the employer who posted them)
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `jobs` (
   `id`              INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `tenant_id`       INT UNSIGNED NOT NULL DEFAULT 1,   -- DEFAULT transitional; every write should set it explicitly
+  `employer_id`     INT UNSIGNED NULL DEFAULT NULL,   -- who owns/manages it (NULL = admin-created)
   `title`           VARCHAR(150) NOT NULL,
   `title_ar`        VARCHAR(150) NULL DEFAULT NULL,
   `slug`            VARCHAR(200) NOT NULL,
   `company_name`    VARCHAR(150) NOT NULL,
   `company_email`   VARCHAR(150) NOT NULL,
+  `company_phone`   VARCHAR(40)  NULL DEFAULT NULL,   -- shown so applicants can call
   `company_website` VARCHAR(255) NULL DEFAULT NULL,
   `location`        VARCHAR(150) NOT NULL,
   `location_ar`     VARCHAR(150) NULL DEFAULT NULL,
@@ -99,19 +98,19 @@ CREATE TABLE IF NOT EXISTS `jobs` (
   KEY `idx_status` (`status`),
   KEY `idx_category` (`category_id`),
   KEY `idx_slug` (`slug`),
-  KEY `idx_job_tenant` (`tenant_id`),
-  CONSTRAINT `fk_job_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE,
+  KEY `idx_job_employer` (`employer_id`),
+  CONSTRAINT `fk_job_employer` FOREIGN KEY (`employer_id`) REFERENCES `employers` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_job_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_job_admin` FOREIGN KEY (`approved_by`) REFERENCES `admins` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
---  Login attempts  (brute-force protection)
+--  Login attempts  (brute-force protection, shared by both logins)
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `login_attempts` (
   `id`           INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `ip_address`   VARCHAR(45)  NOT NULL,
-  `username`     VARCHAR(50)  NULL DEFAULT NULL,
+  `username`     VARCHAR(150) NULL DEFAULT NULL,
   `success`      TINYINT(1)   NOT NULL DEFAULT 0,
   `attempted_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
@@ -119,30 +118,10 @@ CREATE TABLE IF NOT EXISTS `login_attempts` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
---  Applicants  (contact-form applications submitted via job.php)
--- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `applicants` (
-  `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `tenant_id`  INT UNSIGNED NOT NULL DEFAULT 1,
-  `job_id`     INT UNSIGNED NOT NULL,
-  `name`       VARCHAR(150) NOT NULL,
-  `email`      VARCHAR(150) NOT NULL,
-  `phone`      VARCHAR(40)  NULL DEFAULT NULL,
-  `cover_note` TEXT         NULL DEFAULT NULL,
-  `created_at` TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `idx_applicant_job` (`job_id`),
-  KEY `idx_applicant_tenant` (`tenant_id`),
-  CONSTRAINT `fk_applicant_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_applicant_job` FOREIGN KEY (`job_id`) REFERENCES `jobs` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- ------------------------------------------------------------
 --  Activity log  (admin actions on postings)
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `activity_log` (
   `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `tenant_id`  INT UNSIGNED NOT NULL DEFAULT 1,
   `admin_id`   INT UNSIGNED NULL DEFAULT NULL,
   `job_id`     INT UNSIGNED NULL DEFAULT NULL,
   `action`     VARCHAR(30)  NOT NULL,
@@ -151,20 +130,30 @@ CREATE TABLE IF NOT EXISTS `activity_log` (
   PRIMARY KEY (`id`),
   KEY `idx_activity_created` (`created_at`),
   KEY `idx_activity_job` (`job_id`),
-  KEY `idx_activity_tenant` (`tenant_id`),
-  CONSTRAINT `fk_activity_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_activity_admin` FOREIGN KEY (`admin_id`) REFERENCES `admins` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_activity_job` FOREIGN KEY (`job_id`) REFERENCES `jobs` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
+--  Notifications  (on-site alerts to an employer about their postings)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `notifications` (
+  `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `employer_id` INT UNSIGNED NOT NULL,
+  `job_id`      INT UNSIGNED NULL DEFAULT NULL,
+  `type`        VARCHAR(20)  NOT NULL,
+  `title`       VARCHAR(200) NULL DEFAULT NULL,
+  `is_read`     TINYINT(1)   NOT NULL DEFAULT 0,
+  `created_at`  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_notif_emp` (`employer_id`, `is_read`),
+  CONSTRAINT `fk_notif_emp` FOREIGN KEY (`employer_id`) REFERENCES `employers` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_notif_job` FOREIGN KEY (`job_id`) REFERENCES `jobs` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
 --  Seed data
 -- ------------------------------------------------------------
--- A default, active tenant that owns the seed data below.
-INSERT INTO `tenants` (`id`, `name`, `subdomain`, `status`, `activated_at`) VALUES
-  (1, 'Default', 'app', 'active', NOW())
-ON DUPLICATE KEY UPDATE `id` = `id`;
-
 INSERT INTO `categories` (`name`, `name_ar`, `slug`) VALUES
   ('Engineering & Development', 'الهندسة والتطوير',   'engineering'),
   ('Design & Creative',         'التصميم والإبداع',   'design'),
@@ -180,21 +169,21 @@ ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `name_ar` = VALUES(`name_ar`);
 --   username: admin
 --   password: ChangeMe!2025
 -- The hash below is a bcrypt hash of that password.
--- IMPORTANT: log in and change it immediately (or run create_admin.php).
-INSERT INTO `admins` (`tenant_id`, `username`, `email`, `password_hash`, `role`) VALUES
-  (NULL, 'admin', 'admin@kastanajobs.local',
-   '$2y$12$WwG9X326a6h/1dM7stoVzuclq3Br0NG08C5vzlT4mbmeXDrCjkQLi', 'super_admin')
+-- IMPORTANT: log in and change it immediately.
+INSERT INTO `admins` (`username`, `email`, `password_hash`) VALUES
+  ('admin', 'admin@kastanajobs.local',
+   '$2y$12$WwG9X326a6h/1dM7stoVzuclq3Br0NG08C5vzlT4mbmeXDrCjkQLi')
 ON DUPLICATE KEY UPDATE `username` = VALUES(`username`);
 
 -- A couple of approved sample jobs so the homepage isn't empty on first run.
 INSERT INTO `jobs`
-  (`title`, `title_ar`, `slug`, `company_name`, `company_email`, `company_website`, `location`, `location_ar`,
+  (`title`, `title_ar`, `slug`, `company_name`, `company_email`, `company_phone`, `company_website`, `location`, `location_ar`,
    `job_type`, `category_id`, `salary_min`, `salary_max`, `salary_currency`,
    `description`, `description_ar`, `requirements`, `requirements_ar`, `how_to_apply`, `how_to_apply_ar`,
    `apply_url`, `status`, `is_featured`, `approved_at`)
 VALUES
   ('Senior Frontend Engineer', 'مهندس واجهات أمامية أول', 'senior-frontend-engineer-sample', 'Northwind Studio',
-   'careers@northwind.example', 'https://northwind.example', 'Remote (Europe)', 'عن بُعد (أوروبا)',
+   'careers@northwind.example', '+962 6 123 4567', 'https://northwind.example', 'Remote (Europe)', 'عن بُعد (أوروبا)',
    'Full-time', 1, 65000, 90000, 'EUR',
    'We are looking for a senior frontend engineer to lead the build of our design system and customer-facing web app. You will work closely with design and product to ship polished, accessible interfaces.',
    'نبحث عن مهندس واجهات أمامية أول لقيادة بناء نظام التصميم وتطبيق الويب الموجّه للعملاء. ستعمل بشكل وثيق مع فريقي التصميم والمنتج لإطلاق واجهات أنيقة وسهلة الوصول.',
@@ -203,7 +192,7 @@ VALUES
    'Send a short note and a link to your portfolio or GitHub.', 'أرسل رسالة قصيرة مع رابط لأعمالك أو حساب GitHub.',
    'https://northwind.example/apply', 'approved', 1, NOW()),
   ('Brand & Product Designer', 'مصمّم علامة ومنتج', 'brand-product-designer-sample', 'Kastana Labs',
-   'hello@kastana.example', 'https://kastana.example', 'Amman, Jordan', 'عمّان، الأردن',
+   'hello@kastana.example', '+962 7 9000 1234', 'https://kastana.example', 'Amman, Jordan', 'عمّان، الأردن',
    'Full-time', 2, 30000, 45000, 'USD',
    'Join a small, senior team shaping the visual identity and product experience of a growing marketplace. You will own everything from brand to interface.',
    'انضم إلى فريق صغير وذي خبرة يشكّل الهوية البصرية وتجربة المنتج لسوق متنامٍ. ستمتلك كل شيء من العلامة إلى الواجهة.',

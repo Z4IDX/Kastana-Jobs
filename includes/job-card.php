@@ -16,13 +16,12 @@ $thumb = $job['thumbnail_path'] ?: $job['image_path'];
   <div class="job-card__meta">
     <span class="tag">📍 <?= e($loc) ?></span>
     <span class="tag"><?= e(job_type_label($job['job_type'])) ?></span>
-    <?php if ($salary && tenant_flag('show_salary')): ?><span class="tag tag--salary"><?= e($salary) ?></span><?php endif; ?>
+    <?php if ($salary): ?><span class="tag tag--salary"><?= e($salary) ?></span><?php endif; ?>
   </div>
   <div class="job-card__foot">
     <span class="tag"><?= e(cat_name($job['category_name'] ?? null, $job['category_name_ar'] ?? null) ?: '—') ?></span>
     <a class="job-card__link" href="<?= url('job.php?id=' . $job['id']) ?>"><?= e(t('view_role')) ?> <span class="dir-arrow">→</span></a>
   </div>
-  <?php if (tenant_flag('enable_saved')): ?>
   <form method="post" action="<?= url('save.php') ?>" class="save-form">
     <?= csrf_field() ?>
     <input type="hidden" name="job_id" value="<?= (int)$job['id'] ?>">
@@ -30,5 +29,4 @@ $thumb = $job['thumbnail_path'] ?: $job['image_path'];
     <input type="hidden" name="return_url" value="<?= e($_SERVER['REQUEST_URI']) ?>">
     <button type="submit" class="save-btn <?= is_job_saved($job['id']) ? 'is-saved' : '' ?>" aria-pressed="<?= is_job_saved($job['id']) ? 'true' : 'false' ?>" aria-label="<?= is_job_saved($job['id']) ? e(t('unsave_job')) : e(t('save_job')) ?>">★</button>
   </form>
-  <?php endif; ?>
 </article>

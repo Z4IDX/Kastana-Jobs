@@ -1,10 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/config.php';
 
-// Already signed in? Go to the right home for the role.
-if (is_logged_in()) {
-    redirect(($_SESSION['admin_role'] ?? '') === 'super_admin' ? 'admin/tenants.php' : 'admin/dashboard.php');
-}
+if (is_logged_in()) redirect('admin/dashboard.php');
 
 $error = '';
 $ip = client_ip();
@@ -18,15 +15,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $username = input($_POST, 'username');
         $password = (string) ($_POST['password'] ?? '');
 
-        // Authenticate in the current context: the platform owner (super-admin,
-        // no tenant) in the super-admin zone, else this subdomain's company admin.
-        if (is_super_admin_zone()) {
-            $stmt = db()->prepare("SELECT * FROM admins WHERE username = ? AND role = 'super_admin' AND tenant_id IS NULL LIMIT 1");
-            $stmt->execute([$username]);
-        } else {
-            $stmt = db()->prepare("SELECT * FROM admins WHERE username = ? AND role = 'company_admin' AND tenant_id = ? LIMIT 1");
-            $stmt->execute([$username, current_tenant_id()]);
-        }
+        $stmt = db()->prepare("SELECT * FROM admins WHERE username = ? LIMIT 1");
+        $stmt->execute([$username]);
         $admin = $stmt->fetch();
 
         // password_verify is constant-time; we always run it to avoid timing leaks.
@@ -47,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ->execute([$admin['id']]);
 
             login_admin($admin);
-            redirect($admin['role'] === 'super_admin' ? 'admin/tenants.php' : 'admin/dashboard.php');
+            redirect('admin/dashboard.php');
         } else {
             password_verify($password, $dummyHash); // equalize timing
             record_login_attempt($ip, $username, false);

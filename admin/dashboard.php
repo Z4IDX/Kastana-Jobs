@@ -2,8 +2,6 @@
 require_once __DIR__ . '/../config/config.php';
 require_login();
 
-$tid = current_tenant_id(); // every query below is scoped to this company
-
 /* ---------- Handle actions (approve / reject / delete) ---------- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_csrf();
@@ -11,9 +9,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $jobId  = filter_input(INPUT_POST, 'job_id', FILTER_VALIDATE_INT);
 
     if ($jobId) {
-        // Ownership check: only this tenant's job resolves; a foreign id yields null.
-        $lblStmt = db()->prepare("SELECT title, company_name, is_featured, image_path, thumbnail_path FROM jobs WHERE id=? AND tenant_id=?");
-        $lblStmt->execute([$jobId, $tid]);
+        $lblStmt = db()->prepare("SELECT title, company_name, is_featured, image_path, thumbnail_path, employer_id FROM jobs WHERE id=?");
+        $lblStmt->execute([$jobId]);
         $jobRow = $lblStmt->fetch();
         $jobLabel = $jobRow ? $jobRow['title'] . ' — ' . $jobRow['company_name'] : null;
 
@@ -21,27 +18,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             switch ($action) {
                 case 'approve':
                     db()->prepare(
-                        "UPDATE jobs SET status='approved', approved_at=NOW(), approved_by=? WHERE id=? AND tenant_id=?"
-                    )->execute([current_admin_id(), $jobId, $tid]);
+                        "UPDATE jobs SET status='approved', approved_at=NOW(), approved_by=? WHERE id=?"
+                    )->execute([current_admin_id(), $jobId]);
                     log_activity($jobId, 'approve', $jobLabel);
+                    if ($jobRow['employer_id']) notify_employer((int) $jobRow['employer_id'], $jobId, 'approved', $jobRow['title']);
                     flash_set('success', t('ad_fl_approved'));
                     break;
 
                 case 'reject':
-                    db()->prepare("UPDATE jobs SET status='rejected' WHERE id=? AND tenant_id=?")->execute([$jobId, $tid]);
+                    db()->prepare("UPDATE jobs SET status='rejected' WHERE id=?")->execute([$jobId]);
                     log_activity($jobId, 'reject', $jobLabel);
+                    if ($jobRow['employer_id']) notify_employer((int) $jobRow['employer_id'], $jobId, 'rejected', $jobRow['title']);
                     flash_set('info', t('ad_fl_rejected'));
                     break;
 
                 case 'unpublish':
-                    db()->prepare("UPDATE jobs SET status='pending' WHERE id=? AND tenant_id=?")->execute([$jobId, $tid]);
+                    db()->prepare("UPDATE jobs SET status='pending' WHERE id=?")->execute([$jobId]);
                     log_activity($jobId, 'unpublish', $jobLabel);
                     flash_set('info', t('ad_fl_unpublished'));
                     break;
 
                 case 'feature':
                     $wasFeatured = (bool) $jobRow['is_featured'];
-                    db()->prepare("UPDATE jobs SET is_featured = 1 - is_featured WHERE id=? AND tenant_id=?")->execute([$jobId, $tid]);
+                    db()->prepare("UPDATE jobs SET is_featured = 1 - is_featured WHERE id=?")->execute([$jobId]);
                     log_activity($jobId, $wasFeatured ? 'unfeature' : 'feature', $jobLabel);
                     flash_set('success', t('ad_fl_featured'));
                     break;
@@ -50,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     log_activity($jobId, 'delete', $jobLabel); // logged before delete so the FK is satisfiable
                     delete_uploaded_image($jobRow['image_path'] ?: null);
                     delete_uploaded_image($jobRow['thumbnail_path'] ?: null);
-                    db()->prepare("DELETE FROM jobs WHERE id=? AND tenant_id=?")->execute([$jobId, $tid]);
+                    db()->prepare("DELETE FROM jobs WHERE id=?")->execute([$jobId]);
                     flash_set('info', t('ad_fl_deleted'));
                     break;
             }
@@ -64,36 +63,30 @@ $tab = $_GET['tab'] ?? 'pending';
 $allowedTabs = ['pending', 'approved', 'rejected', 'all'];
 if (!in_array($tab, $allowedTabs, true)) $tab = 'pending';
 
-$counts = db()->prepare(
+$counts = db()->query(
     "SELECT
         SUM(status='pending')  AS pending,
         SUM(status='approved') AS approved,
         SUM(status='rejected') AS rejected,
         COUNT(*)               AS total
-     FROM jobs WHERE tenant_id = ?"
-);
-$counts->execute([$tid]);
-$counts = $counts->fetch();
+     FROM jobs"
+)->fetch();
 
 if ($tab === 'all') {
-    $stmt = db()->prepare(
-        "SELECT j.*, c.name AS category_name,
-                (SELECT COUNT(*) FROM applicants a WHERE a.job_id = j.id) AS applicant_count
+    $stmt = db()->query(
+        "SELECT j.*, c.name AS category_name
          FROM jobs j
          LEFT JOIN categories c ON c.id=j.category_id
-         WHERE j.tenant_id = ?
          ORDER BY FIELD(j.status,'pending','approved','rejected'), j.created_at DESC"
     );
-    $stmt->execute([$tid]);
 } else {
     $stmt = db()->prepare(
-        "SELECT j.*, c.name AS category_name,
-                (SELECT COUNT(*) FROM applicants a WHERE a.job_id = j.id) AS applicant_count
+        "SELECT j.*, c.name AS category_name
          FROM jobs j
          LEFT JOIN categories c ON c.id=j.category_id
-         WHERE j.tenant_id = ? AND j.status=? ORDER BY j.created_at DESC"
+         WHERE j.status=? ORDER BY j.created_at DESC"
     );
-    $stmt->execute([$tid, $tab]);
+    $stmt->execute([$tab]);
 }
 $jobs = $stmt->fetchAll();
 
@@ -175,7 +168,6 @@ $statusLabels = ['pending' => t('ad_tab_pending'), 'approved' => t('ad_tab_publi
         <?php endif; ?>
 
         <a href="<?= url('admin/edit-job.php?id=' . $job['id']) ?>" class="btn btn--ghost btn--sm"><?= e(t('ad_edit')) ?></a>
-        <a href="<?= url('admin/applicants.php?job_id=' . $job['id']) ?>" class="btn btn--ghost btn--sm"><?= e(t('ad_applicants')) ?> (<?= (int)$job['applicant_count'] ?>)</a>
 
         <?php if ($job['status'] !== 'approved'): ?>
           <form method="post" class="inline-form">

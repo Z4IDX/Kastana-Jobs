@@ -9,7 +9,7 @@ $allowedStatus = ['pending','approved','rejected'];
 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 $isEdit = false;
 $job = [
-    'title'=>'','company_name'=>'','company_email'=>'','company_website'=>'',
+    'title'=>'','company_name'=>'','company_email'=>'','company_phone'=>'','company_website'=>'',
     'location'=>'','job_type'=>'Full-time','category_id'=>'','salary_min'=>'','salary_max'=>'',
     'salary_currency'=>'USD','description'=>'','requirements'=>'','how_to_apply'=>'','apply_url'=>'',
     'status'=>'pending','is_featured'=>0,'expires_at'=>'',
@@ -18,8 +18,8 @@ $job = [
 ];
 
 if ($id) {
-    $stmt = db()->prepare("SELECT * FROM jobs WHERE id=? AND tenant_id=? LIMIT 1");
-    $stmt->execute([$id, current_tenant_id()]);
+    $stmt = db()->prepare("SELECT * FROM jobs WHERE id=? LIMIT 1");
+    $stmt->execute([$id]);
     $found = $stmt->fetch();
     if ($found) { $job = $found; $isEdit = true; }
     else { flash_set('error', 'That posting no longer exists.'); redirect('admin/dashboard.php'); }
@@ -30,7 +30,7 @@ $errors = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_csrf();
 
-    foreach (['title','company_name','company_email','company_website','location',
+    foreach (['title','company_name','company_email','company_phone','company_website','location',
               'job_type','category_id','salary_min','salary_max','salary_currency',
               'description','requirements','how_to_apply','apply_url','status',
               'title_ar','location_ar','description_ar','requirements_ar','how_to_apply_ar'] as $k) {
@@ -43,6 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (mb_strlen($job['title']) < 3) $errors[] = 'Job title is too short.';
     if (mb_strlen($job['company_name']) < 2) $errors[] = 'Company name is required.';
     if (!filter_var($job['company_email'], FILTER_VALIDATE_EMAIL)) $errors[] = 'A valid company email is required.';
+    if ($job['company_phone'] !== '' && !preg_match('/^[0-9+\-\s()]{6,40}$/', $job['company_phone'])) $errors[] = t('err_app_phone');
     if ($job['company_website'] !== '' && !filter_var($job['company_website'], FILTER_VALIDATE_URL)) $errors[] = 'Company website must be a valid URL.';
     if (mb_strlen($job['location']) < 2) $errors[] = 'Location is required.';
     if (!in_array($job['job_type'], $allowedTypes, true)) $errors[] = 'Invalid job type.';
@@ -100,19 +101,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($isEdit) {
             $stmt = db()->prepare(
-                "UPDATE jobs SET title=?, title_ar=?, company_name=?, company_email=?, company_website=?,
+                "UPDATE jobs SET title=?, title_ar=?, company_name=?, company_email=?, company_phone=?, company_website=?,
                  location=?, location_ar=?, job_type=?, category_id=?, salary_min=?, salary_max=?, salary_currency=?,
                  description=?, description_ar=?, requirements=?, requirements_ar=?,
                  how_to_apply=?, how_to_apply_ar=?, apply_url=?, image_path=?, thumbnail_path=?, status=?, is_featured=?, expires_at=?,
                  approved_at=COALESCE(?, approved_at), approved_by=COALESCE(?, approved_by)
-                 WHERE id=? AND tenant_id=?"
+                 WHERE id=?"
             );
             $stmt->execute([
-                $job['title'],$job['title_ar']?:null,$job['company_name'],$job['company_email'],$job['company_website']?:null,
+                $job['title'],$job['title_ar']?:null,$job['company_name'],$job['company_email'],$job['company_phone']?:null,$job['company_website']?:null,
                 $job['location'],$job['location_ar']?:null,$job['job_type'],$catId,$salaryMin,$salaryMax,$job['salary_currency'],
                 $job['description'],$job['description_ar']?:null,$job['requirements']?:null,$job['requirements_ar']?:null,
                 $job['how_to_apply'],$job['how_to_apply_ar']?:null,$job['apply_url']?:null,$finalImage,$finalThumb,
-                $job['status'],$job['is_featured'],$expiresAt,$approvedAt,$approvedBy,$id,current_tenant_id(),
+                $job['status'],$job['is_featured'],$expiresAt,$approvedAt,$approvedBy,$id,
             ]);
             log_activity($id, 'edit', $job['title'] . ' — ' . $job['company_name']);
             flash_set('success', 'Posting updated.');
@@ -120,13 +121,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $slug = slugify($job['title']) . '-' . substr(bin2hex(random_bytes(3)),0,5);
             $stmt = db()->prepare(
                 "INSERT INTO jobs
-                 (tenant_id,title,title_ar,slug,company_name,company_email,company_website,location,location_ar,job_type,category_id,
+                 (title,title_ar,slug,company_name,company_email,company_phone,company_website,location,location_ar,job_type,category_id,
                   salary_min,salary_max,salary_currency,description,description_ar,requirements,requirements_ar,
                   how_to_apply,how_to_apply_ar,apply_url,image_path,thumbnail_path,status,is_featured,expires_at,approved_at,approved_by)
                  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
             );
             $stmt->execute([
-                current_tenant_id(),$job['title'],$job['title_ar']?:null,$slug,$job['company_name'],$job['company_email'],$job['company_website']?:null,
+                $job['title'],$job['title_ar']?:null,$slug,$job['company_name'],$job['company_email'],$job['company_phone']?:null,$job['company_website']?:null,
                 $job['location'],$job['location_ar']?:null,$job['job_type'],$catId,$salaryMin,$salaryMax,$job['salary_currency'],
                 $job['description'],$job['description_ar']?:null,$job['requirements']?:null,$job['requirements_ar']?:null,
                 $job['how_to_apply'],$job['how_to_apply_ar']?:null,$job['apply_url']?:null,$finalImage,$finalThumb,
@@ -209,6 +210,10 @@ $v = fn($k) => e((string)($job[$k] ?? ''));
         <input type="text" name="location" value="<?= $v('location') ?>" maxlength="150" required>
       </div>
     </div>
+    <div class="field">
+      <label><?= e(t('f_phone')) ?> <span class="hint"><?= e(t('f_phone_hint')) ?></span></label>
+      <input type="tel" name="company_phone" value="<?= $v('company_phone') ?>" maxlength="40" dir="ltr">
+    </div>
 
     <div class="edit-section-title"><?= e(t('ad_sec_comp')) ?></div>
     <div class="field-row">
@@ -260,7 +265,7 @@ $v = fn($k) => e((string)($job[$k] ?? ''));
       <input type="file" name="image" accept="image/png,image/jpeg,image/webp,image/gif" class="file-input" style="margin-top:0.5rem">
     </div>
 
-    <div class="edit-section-title">Arabic content <span style="color:var(--ink-faint);font-weight:400;text-transform:none;letter-spacing:0">— optional; shown to visitors browsing in Arabic</span></div>
+    <div class="edit-section-title">المحتوى العربي <span style="color:var(--ink-faint);font-weight:400;text-transform:none;letter-spacing:0">— اختياري؛ يظهر للزوّار الذين يتصفحون بالعربية</span></div>
     <div class="field" dir="rtl">
       <label style="text-align:right">المسمّى الوظيفي (عربي)</label>
       <input type="text" name="title_ar" value="<?= $v('title_ar') ?>" maxlength="150" dir="rtl">
@@ -282,29 +287,29 @@ $v = fn($k) => e((string)($job[$k] ?? ''));
       <textarea name="how_to_apply_ar" dir="rtl"><?= $v('how_to_apply_ar') ?></textarea>
     </div>
 
-    <div class="edit-section-title">Publishing</div>
+    <div class="edit-section-title">النشر</div>
     <div class="field-row">
       <div class="field">
-        <label>Status</label>
+        <label>الحالة</label>
         <select name="status">
-          <option value="pending"  <?= $job['status']==='pending'?'selected':'' ?>>Pending (hidden)</option>
-          <option value="approved" <?= $job['status']==='approved'?'selected':'' ?>>Published (live)</option>
-          <option value="rejected" <?= $job['status']==='rejected'?'selected':'' ?>>Rejected (hidden)</option>
+          <option value="pending"  <?= $job['status']==='pending'?'selected':'' ?>>بانتظار المراجعة (مخفية)</option>
+          <option value="approved" <?= $job['status']==='approved'?'selected':'' ?>>منشورة (ظاهرة)</option>
+          <option value="rejected" <?= $job['status']==='rejected'?'selected':'' ?>>مرفوضة (مخفية)</option>
         </select>
       </div>
       <div class="field" style="display:flex;align-items:center;gap:0.6rem;margin-top:1.9rem">
         <input type="checkbox" name="is_featured" id="is_featured" value="1" <?= $job['is_featured']?'checked':'' ?> style="width:auto">
-        <label for="is_featured" style="margin:0">Feature this role on the board</label>
+        <label for="is_featured" style="margin:0">تمييز هذه الوظيفة على اللوحة</label>
       </div>
       <div class="field">
-        <label>Expires on <span class="hint">(optional — leave blank to never expire)</span></label>
+        <label>تنتهي في <span class="hint">(اختياري — اتركه فارغًا كي لا تنتهي)</span></label>
         <input type="date" name="expires_at" value="<?= $v('expires_at') ?>">
       </div>
     </div>
 
     <div class="form-actions">
-      <a href="<?= url('admin/dashboard.php') ?>" class="btn btn--ghost">Cancel</a>
-      <button type="submit" class="btn btn--primary"><?= $isEdit ? 'Save changes' : 'Create posting' ?></button>
+      <a href="<?= url('admin/dashboard.php') ?>" class="btn btn--ghost">إلغاء</a>
+      <button type="submit" class="btn btn--primary"><?= $isEdit ? 'حفظ التغييرات' : 'إنشاء الوظيفة' ?></button>
     </div>
   </div>
 </form>
