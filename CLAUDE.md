@@ -5,11 +5,13 @@ Project context for Claude Code. Read this before making changes.
 ## What this is
 A curated **job board** built in plain PHP + MySQL to run on **XAMPP** (Apache + MariaDB). No framework, no build step, no Composer/npm. Edit PHP/CSS/JS directly and test in the browser.
 
-- **Companies** submit postings through a public form — no account needed.
-- **Admins** log in to review, edit, approve, reject, feature, or delete postings.
-- **Visitors** browse approved postings without any account.
-- The public site is **bilingual (English / Arabic)** with an RTL layout; the admin panel is English-only but lets admins enter Arabic content per posting.
-- Postings can carry an uploaded **company image/logo**.
+- **Employers** register an account (`register.php` / `login.php`), then create and edit their **own** postings from `employer/dashboard.php`. Every submit/edit enters the admin review queue (`status='pending'`).
+- **Admins** (platform staff) log in at `admin/login.php` to review, edit, approve, reject, feature, expire, or delete **all** postings, and manage categories.
+- **Visitors** browse approved postings without any account, and **apply directly by phone or email** — the site is not an intermediary (there is no on-site application form).
+- **Notifications**: when a posting is approved/rejected, the employer sees an on-site popup on their dashboard (no email transport exists).
+- The site is **Arabic-first**: Arabic is the default language, the whole app (public, employer, admin) is translated and RTL, with an English toggle. Postings hold optional `*_ar` fields per language.
+- **Single site** — the earlier multi-tenant/subdomain system was removed. One board, no `tenants`.
+- Postings can carry an uploaded **company image/logo** (auto-thumbnailed).
 
 Brand: "Kastana Mena". Palette is blue / yellow / grey (see CSS tokens below).
 
@@ -26,14 +28,17 @@ Brand: "Kastana Mena". Palette is blue / yellow / grey (see CSS tokens below).
 3. Import `config/database.sql` (Navicat or phpMyAdmin) — creates DB `kastana_jobs`, tables, seed data, and a default admin.
 4. Open `http://localhost/kastana-jobs/`. Admin: `http://localhost/kastana-jobs/admin/login.php`.
 5. Default admin login: **`admin` / `ChangeMe!2025`** (change via admin → Account).
-6. Existing DB from an earlier version? Run `config/migration_arabic.sql`, `config/migration_uploads.sql`, `config/migration_expiry.sql`, `config/migration_thumbnails.sql`, `config/migration_applicants.sql`, `config/migration_activity_log.sql`, and `config/migration_tenancy.sql` once.
+6. Coming from the multi-tenant version? Run `config/migration_single_site.sql` once (drops tenants/tenant_id/applicants, adds `employers`, `jobs.employer_id` + `company_phone`), then `config/migration_notifications.sql`. Older base migrations (arabic/uploads/expiry/thumbnails/activity_log) still apply to pre-those installs.
 7. `uploads/` must be writable (automatic on Windows/XAMPP; `chmod 775 uploads` on macOS/Linux).
 
 ## File map
 ```
-index.php            Public board: hero, server-side search/filter/sort/pagination, job cards
-job.php              Single job detail (bilingual, apply button/mailto, copy-link, applicant form)
-submit.php           Public submission form (validation, honeypot, image upload, optional *_ar fields) -> 'pending'
+index.php            Public board: hero, server-side search + category/job-type filter + sort + pagination
+job.php              Single job detail (bilingual; apply by Call (tel:) / Email (mailto) / apply_url; copy-link)
+register.php         Employer sign-up (open); creates an active account and signs in
+login.php            Employer sign-in (rate-limited, constant-time verify)
+employer/dashboard.php   Employer's own postings + statuses + approval popup notifications
+employer/post-job.php    Employer create/edit their own posting (any edit -> 'pending'); logout.php
 save.php             POST-only toggle for the saved-jobs cookie (CSRF, whitelisted return redirect)
 saved.php            Visitor's bookmarked jobs (reads the kastana_saved cookie)
 .htaccess            Security: no dir listing, block sensitive files/dotfiles, headers
@@ -45,16 +50,10 @@ config/
                      db() PDO singleton, constants (BASE_URL, USE_HTTPS, login limits, MAX_UPLOAD_BYTES).
                      Requires functions.php, i18n.php, upload.php.
   database.sql       Full schema + seed. Starts with `SET NAMES utf8mb4` (keep it!).
-  migration_arabic.sql   Adds *_ar columns + Arabic seed (for existing installs).
-  migration_uploads.sql  Adds jobs.image_path (for existing installs).
-  migration_expiry.sql   Adds jobs.expires_at (for existing installs).
-  migration_thumbnails.sql  Adds jobs.thumbnail_path (for existing installs).
-  migration_applicants.sql  Creates the applicants table (for existing installs).
-  migration_activity_log.sql  Creates the activity_log table (for existing installs).
-  migration_tenancy.sql  Multi-tenancy Phase 1: tenants table + tenant_id on jobs/applicants/
-                     activity_log + admins.role/tenant_id (for existing installs). See docs/MULTITENANCY.md.
-  migration_tenant_branding.sql  Phase 2: tenants.brand_name/logo_path/primary_color (per-tenant branding).
-  migration_tenant_settings.sql  Phase 2: tenants.settings JSON (customization options; read via tenant_setting()/tenant_flag()).
+  migration_single_site.sql  Multi-tenant -> single-site: drops tenants/tenant_id/applicants, adds
+                     employers + jobs.employer_id + company_phone, simplifies admins.
+  migration_notifications.sql  Creates the notifications table (employer approval alerts).
+  migration_*.sql    Older base migrations (arabic/uploads/expiry/thumbnails/activity_log) for pre-those installs.
   .htaccess          Deny-all (folder not web-accessible).
 
 includes/
@@ -76,10 +75,9 @@ admin/
   login.php          Rate-limited login (bcrypt verify, dummy-hash timing, CSRF).
   logout.php
   dashboard.php      List/filter by status; POST actions: approve, reject, unpublish, feature, delete
-                     (all logged to activity_log). Shows thumbnails, AR/Expired badges, applicant counts.
-  edit-job.php       Create/edit a posting. Bilingual fields + image upload/replace/remove (+thumbnail).
+                     (logged to activity_log). approve/reject notify the owning employer. Thumbnails, AR/Expired badges.
+  edit-job.php       Create/edit any posting. Bilingual fields + company_phone + image upload/thumbnail.
                      Sets status + featured + expires_at. Logs create/edit to activity_log.
-  applicants.php     Per-job applicant list (?job_id=N).
   activity-log.php   Paginated admin action history.
   categories.php     Category list + delete (job counts shown; FK sets jobs.category_id NULL).
   category-form.php  Create/edit a category (auto slug via slugify + collision suffix).
@@ -102,19 +100,20 @@ uploads/             User-uploaded images. .htaccess disables code execution her
 ```
 
 ## Database (`kastana_jobs`, utf8mb4)
-- **tenants** (multi-tenancy): id, name, brand_name, logo_path, primary_color (per-tenant branding; blank = platform default), subdomain (uniq), status (pending/active/suspended), created_at, activated_at. One company = one tenant, addressed by subdomain. See docs/MULTITENANCY.md. Branding is read via brand_name()/brand_logo_url()/brand_color(); the `settings` JSON holds customization options (tagline, highlight_color, font_theme, hero_theme light/dark, hero_title/subtext, about, show_stats, per_page, show_salary, enable_apply, enable_saved, footer_note, social_website/linkedin/x/instagram) read via tenant_setting()/tenant_flag(); font pairings come from font_theme_options()/current_font_theme(). Companies edit all of it at admin/branding.php ("Customize"), and pick an accent colour + font + hero headline during signup.php.
-- **admins**: id, tenant_id (FK→tenants, NULL = platform super-admin), username, email, password_hash (bcrypt), role (super_admin/company_admin), last_login, created_at. username/email unique **per tenant**.
+- **admins** (platform staff): id, username (uniq), email (uniq), password_hash (bcrypt), last_login, created_at.
+- **employers** (self-registered posters, kept separate from admins on purpose): id, company_name, email (uniq), password_hash (bcrypt), phone, website, status (active/suspended), last_login, created_at.
 - **categories**: id, name, name_ar, slug (uniq), created_at.
-- **jobs**: id, tenant_id (FK→tenants; DEFAULT 1 is transitional until every write sets it), title, title_ar, slug, company_name, company_email, company_website,
+- **jobs**: id, employer_id (FK→employers, NULL on delete = admin-created), title, title_ar, slug, company_name, company_email,
+  company_phone (shown so applicants can call), company_website,
   location, location_ar, job_type (ENUM: Full-time, Part-time, Contract, Internship, Remote, Temporary),
   category_id (FK→categories, NULL on delete), salary_min, salary_max, salary_currency,
   description, description_ar, requirements, requirements_ar, how_to_apply, how_to_apply_ar,
   apply_url, image_path, thumbnail_path, status (ENUM: pending, approved, rejected), is_featured,
   expires_at (NULL = never expires), created_at, updated_at, approved_at, approved_by (FK→admins).
-- **login_attempts**: id, ip_address, username, success, attempted_at.
-- **applicants**: id, tenant_id (FK→tenants), job_id (FK→jobs, CASCADE on delete), name, email, phone, cover_note, created_at.
-- **activity_log**: id, tenant_id (FK→tenants), admin_id (FK→admins, NULL on delete), job_id (FK→jobs, NULL on delete),
+- **login_attempts**: id, ip_address, username, success, attempted_at (shared by admin + employer logins).
+- **activity_log**: id, admin_id (FK→admins, NULL on delete), job_id (FK→jobs, NULL on delete),
   action, details (snapshot label, survives job deletion), created_at.
+- **notifications**: id, employer_id (FK→employers, CASCADE), job_id (FK→jobs, NULL on delete), type (approved/rejected), title (snapshot), is_read, created_at. Written by notify_employer(); shown/cleared on employer/dashboard.php via unread_notifications()/mark_notifications_read().
 
 Seed: 8 bilingual categories, 1 admin, 2 approved bilingual sample jobs.
 
@@ -162,7 +161,7 @@ Fonts: Fraunces (display), Plus Jakarta Sans (body), Space Mono (labels); Cairo 
 
 ## Gotchas
 - **`SET NAMES utf8mb4`** at the top of the SQL files is required — without it, Arabic seed data imports as mojibake on some clients.
-- **edit-job.php INSERT/UPDATE** have exactly matched column/placeholder/value counts (INSERT = 27 columns incl `image_path`, `thumbnail_path`, `expires_at`; submit.php INSERT = 23 incl the five `*_ar` columns). If you add a jobs column, update the CREATE TABLE, the relevant migration, and all three parts of each statement.
+- **Job INSERT/UPDATE** statements have exactly matched column/placeholder/value counts, in two places: `admin/edit-job.php` (admin, INSERT = 28 columns incl `company_phone`, `image_path`, `thumbnail_path`, `expires_at`) and `employer/post-job.php` (employer, INSERT = 24 columns incl `employer_id` + `company_phone`, no status/expiry which stay defaulted). If you add a jobs column, update the CREATE TABLE, `migration_single_site.sql`, and all three parts (columns/placeholders/values) of **both** statements.
 - The public form accepts optional `*_ar` fields (title/location/description/requirements/how_to_apply); admins can still add or edit Arabic later in the editor.
 - Admin UI strings are intentionally English; don't wrap them in `t()` unless the goal is to make the admin bilingual too.
 - No build step: don't add bundlers. Keep everything runnable by copying to `htdocs`.

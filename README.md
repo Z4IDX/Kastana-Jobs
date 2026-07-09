@@ -1,20 +1,21 @@
 # Kastana Jobs
 
-A curated, **bilingual (English/Arabic)** job board where **companies submit postings**, **admins review and approve them**, and **visitors browse without any account**. Built with plain PHP + MySQL (MariaDB) so it runs on XAMPP with no build step.
+An **Arabic-first (RTL)** curated job board where **employers register and post roles**, **admins review and approve them**, and **visitors browse and apply directly by phone or email**. Built with plain PHP + MySQL (MariaDB) so it runs on XAMPP with no build step.
 
 > **Reviewing the code?** See [ARCHITECTURE.md](ARCHITECTURE.md) for the design decisions, security model, and trade-offs.
 
 ## Features
 
-- **Public board** — hero, category filters, keyword search, sort (newest/salary/title), and pagination — all server-side and shareable via the URL.
-- **No-account submission** — companies post a role (optionally in both languages, with a logo) straight into a review queue.
-- **Admin panel** — review/approve/reject/feature/unpublish/delete, edit postings, manage categories, set expiry dates, and view applicants.
-- **Applicant capture** — job seekers apply through an on-site form; applications are listed per posting in the admin.
+- **Public board** — hero, keyword search, **category + job-type filters**, sort (newest/oldest/salary/title), result count, and pagination — all server-side and shareable via the URL.
+- **Employer accounts** — companies register, then create and edit their **own** postings (bilingual, with a logo); every submit/edit enters the review queue.
+- **Admin panel** — review/approve/reject/feature/unpublish/delete and edit all postings, manage categories, set expiry dates.
+- **Apply by call or email** — the job page shows the company's phone (`tel:`) and email (`mailto:`); the site is not an intermediary (no on-site application form).
+- **On-site notifications** — employers get a popup on their dashboard when a posting is approved or rejected (no email needed).
 - **Saved jobs** — visitors bookmark roles (cookie-based, no login needed).
 - **Activity log** — every admin action on a posting is recorded, and the history survives even after a posting is deleted.
-- **Bilingual + RTL** — full English/Arabic UI with a per-posting Arabic content option.
+- **Arabic-first + bilingual** — Arabic default, full RTL across public/employer/admin, with an English toggle and per-posting Arabic content.
 - **Image handling** — validated uploads with auto-generated thumbnails.
-- **Security-first** — CSRF, prepared statements, bcrypt, login rate-limiting, CSP, and more (see below).
+- **Security-first** — CSRF, prepared statements, bcrypt, login rate-limiting, CSP, and more (see below). Employers and staff admins live in separate tables.
 
 ---
 
@@ -23,8 +24,10 @@ A curated, **bilingual (English/Arabic)** job board where **companies submit pos
 ```
 kastana-jobs/
 ├── index.php            # Public job board (hero, filters, cards)
-├── job.php              # Single job detail page
-├── submit.php           # Company submission form (no login needed)
+├── job.php              # Single job detail page (apply by call/email)
+├── register.php         # Employer sign-up
+├── login.php            # Employer sign-in
+├── employer/            # Employer dashboard + post-job (manage own postings)
 ├── config/
 │   ├── config.php       # ← EDIT THIS: DB credentials & settings
 │   ├── database.sql     # Import this to create the database
