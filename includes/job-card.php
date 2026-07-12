@@ -4,11 +4,12 @@
  * variables from the including page's loop.
  */
 $thumb = $job['thumbnail_path'] ?: $job['image_path'];
+$isViewed = !empty($_SESSION['viewed_jobs'][$job['id']]);
 ?>
-<article class="job-card reveal <?= $job['is_featured'] ? 'is-featured' : '' ?>">
+<article class="job-card reveal <?= $job['is_featured'] ? 'is-featured' : '' ?> <?= $isViewed ? 'is-viewed' : '' ?>">
   <div class="job-card__top">
     <div class="job-card__logo" aria-hidden="true"><?php if (!empty($thumb)): ?><img src="<?= url($thumb) ?>" alt="" loading="lazy" decoding="async" width="46" height="46"><?php else: ?><?= e($initial) ?><?php endif; ?></div>
-    <div class="job-card__stamp"><?= e(time_ago($job['created_at'])) ?></div>
+    <div class="job-card__stamp"><?php if ($isViewed): ?><span class="viewed-flag"><?= e(t('viewed_label')) ?></span> · <?php endif; ?><?= e(time_ago($job['created_at'])) ?></div>
   </div>
   <?php if ($job['is_featured']): ?><span class="badge-featured"><?= e(t('featured')) ?></span><?php endif; ?>
   <?php if (strtotime($job['created_at']) > time() - 3 * 86400): ?><span class="badge-new"><?= e(t('badge_new')) ?></span><?php endif; ?>

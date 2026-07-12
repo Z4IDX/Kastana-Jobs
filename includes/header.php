@@ -23,7 +23,7 @@ $__savedCount = count(saved_job_ids());
   <?php endif; ?>
   <link rel="stylesheet" href="<?= url('assets/css/style.css') ?>?v=<?= @filemtime(__DIR__ . '/../assets/css/style.css') ?>">
 </head>
-<body data-t-back="<?= e(t('back_to_top')) ?>" data-t-showpw="<?= e(t('show_password')) ?>" data-t-hidepw="<?= e(t('hide_password')) ?>">
+<body data-t-back="<?= e(t('back_to_top')) ?>" data-t-showpw="<?= e(t('show_password')) ?>" data-t-hidepw="<?= e(t('hide_password')) ?>" data-t-saved="<?= e(t('saved_toast')) ?>" data-t-removed="<?= e(t('removed_toast')) ?>">
 <a class="skip-link" href="#main"><?= e(t('skip_content')) ?></a>
 <header class="site-header">
   <div class="wrap site-header__inner">

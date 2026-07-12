@@ -135,6 +135,27 @@ require __DIR__ . '/includes/header.php';
         <?= e(t('share_whatsapp')) ?>
       </a>
 
+      <button type="button" class="btn btn--ghost btn--block" data-web-share
+              data-share-url="<?= e($absUrl) ?>" data-share-title="<?= e($title . ' — ' . $job['company_name']) ?>"
+              style="margin-top:0.6rem;display:none">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+        <?= e(t('share_label')) ?>
+      </button>
+
+      <form method="post" action="<?= url('save.php') ?>" class="save-form save-form--inline" style="margin-top:0.6rem">
+        <?= csrf_field() ?>
+        <input type="hidden" name="job_id" value="<?= (int)$job['id'] ?>">
+        <input type="hidden" name="save_action" value="<?= is_job_saved($job['id']) ? 'unsave' : 'save' ?>">
+        <input type="hidden" name="return_url" value="<?= e($_SERVER['REQUEST_URI']) ?>">
+        <button type="submit" class="save-btn save-btn--wide <?= is_job_saved($job['id']) ? 'is-saved' : '' ?>" aria-pressed="<?= is_job_saved($job['id']) ? 'true' : 'false' ?>"
+                aria-label="<?= is_job_saved($job['id']) ? e(t('unsave_job')) : e(t('save_job')) ?>"
+                data-label-save="<?= e(t('save_job')) ?>" data-label-unsave="<?= e(t('unsave_job')) ?>"
+                data-text-save="<?= e(t('save_this_job')) ?>" data-text-unsave="<?= e(t('saved_label')) ?>">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h12a1 1 0 0 1 1 1v15l-7-4-7 4V5a1 1 0 0 1 1-1z"/></svg>
+          <span data-save-text><?= is_job_saved($job['id']) ? e(t('saved_label')) : e(t('save_this_job')) ?></span>
+        </button>
+      </form>
+
       <p style="text-align:center;font-size:0.8rem;color:var(--ink-faint);margin-top:0.9rem"><?= e(t('mention', APP_NAME)) ?></p>
     </aside>
   </div>

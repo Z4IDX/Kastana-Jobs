@@ -135,11 +135,14 @@
         btn.classList.toggle('is-saved', data.saved);
         btn.setAttribute('aria-pressed', data.saved ? 'true' : 'false');
         btn.setAttribute('aria-label', data.saved ? btn.dataset.labelUnsave : btn.dataset.labelSave);
+        var stext = btn.querySelector('[data-save-text]');
+        if (stext && btn.dataset.textSave) stext.textContent = data.saved ? btn.dataset.textUnsave : btn.dataset.textSave;
         if (actionInput) actionInput.value = data.saved ? 'unsave' : 'save';
         document.querySelectorAll('[data-saved-count]').forEach(function (el) {
           el.hidden = data.count <= 0;
           el.textContent = el.classList.contains('nav-count') ? '(' + data.count + ')' : String(data.count);
         });
+        showToast(data.saved ? (document.body.dataset.tSaved || 'Saved') : (document.body.dataset.tRemoved || 'Removed'), data.saved ? 'success' : 'info');
       }).catch(function () { form.submit(); });
     });
   });
@@ -188,6 +191,62 @@
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (el && el.isContentEditable)) return;
     var search = document.querySelector('input[type="search"]');
     if (search) { e.preventDefault(); search.focus(); }
+  });
+
+  /* ---------- Lightweight toast helper (reuses the toast styles) ---------- */
+  function showToast(msg, kind) {
+    var stack = document.getElementById('toast-stack');
+    if (!stack) {
+      stack = document.createElement('div');
+      stack.id = 'toast-stack';
+      stack.className = 'toast-stack';
+      document.body.appendChild(stack);
+    }
+    var el = document.createElement('div');
+    el.className = 'toast toast--' + (kind || 'success');
+    el.setAttribute('role', 'status');
+    var p = document.createElement('p');
+    p.textContent = msg;
+    el.appendChild(p);
+    stack.appendChild(el);
+    setTimeout(function () {
+      el.classList.add('is-leaving');
+      setTimeout(function () { el.remove(); }, 250);
+    }, 2200);
+  }
+
+  /* ---------- Native share (mobile OS share sheet); hidden where unsupported ---------- */
+  document.querySelectorAll('[data-web-share]').forEach(function (btn) {
+    if (!navigator.share) return;
+    btn.style.display = '';
+    btn.addEventListener('click', function () {
+      navigator.share({ title: btn.dataset.shareTitle, url: btn.dataset.shareUrl }).catch(function () {});
+    });
+  });
+
+  /* ---------- Warn before leaving a form with unsaved edits ---------- */
+  document.querySelectorAll('form[data-dirty-guard]').forEach(function (form) {
+    var dirty = false;
+    form.addEventListener('input', function () { dirty = true; });
+    form.addEventListener('submit', function () { dirty = false; });
+    window.addEventListener('beforeunload', function (e) {
+      if (dirty) { e.preventDefault(); e.returnValue = ''; }
+    });
+  });
+
+  /* ---------- Live character counters on textareas ---------- */
+  document.querySelectorAll('.field textarea').forEach(function (ta) {
+    var min = parseInt(ta.getAttribute('data-min') || '0', 10);
+    var counter = document.createElement('span');
+    counter.className = 'char-counter';
+    ta.parentNode.appendChild(counter);
+    var update = function () {
+      var n = ta.value.length;
+      counter.textContent = min ? (n + ' / ' + min) : String(n);
+      counter.classList.toggle('is-short', min > 0 && n < min);
+    };
+    ta.addEventListener('input', update);
+    update();
   });
 
   function fallbackCopy(text, done) {

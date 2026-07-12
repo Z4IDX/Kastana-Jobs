@@ -141,7 +141,7 @@ $val = fn($k) => e((string) ($job[$k] ?? ''));
     <?php endif; ?>
 
     <div class="form-card">
-      <form method="post" action="<?= url('employer/post-job.php' . ($isEdit ? '?id=' . $id : '')) ?>" enctype="multipart/form-data" novalidate>
+      <form method="post" action="<?= url('employer/post-job.php' . ($isEdit ? '?id=' . $id : '')) ?>" enctype="multipart/form-data" novalidate data-dirty-guard>
         <?= csrf_field() ?>
 
         <div class="field"><label><?= e(t('f_title')) ?> <span class="req">*</span></label><input type="text" name="title" value="<?= $val('title') ?>" maxlength="150" required></div>
@@ -173,9 +173,9 @@ $val = fn($k) => e((string) ($job[$k] ?? ''));
           <div class="field"><label><?= e(t('f_currency')) ?></label><input type="text" name="salary_currency" value="<?= e($job['salary_currency'] ?? 'USD') ?>" maxlength="3" dir="ltr" style="text-transform:uppercase"></div>
         </div>
 
-        <div class="field"><label><?= e(t('f_desc')) ?> <span class="req">*</span></label><textarea name="description" required placeholder="<?= e(t('f_desc_ph')) ?>"><?= $val('description') ?></textarea></div>
+        <div class="field"><label><?= e(t('f_desc')) ?> <span class="req">*</span></label><textarea name="description" required data-min="40" placeholder="<?= e(t('f_desc_ph')) ?>"><?= $val('description') ?></textarea></div>
         <div class="field"><label><?= e(t('f_req')) ?> <span class="hint"><?= e(t('f_optional')) ?></span></label><textarea name="requirements" placeholder="<?= e(t('f_req_ph')) ?>"><?= $val('requirements') ?></textarea></div>
-        <div class="field"><label><?= e(t('f_apply')) ?> <span class="req">*</span></label><textarea name="how_to_apply" required placeholder="<?= e(t('f_apply_ph')) ?>"><?= $val('how_to_apply') ?></textarea></div>
+        <div class="field"><label><?= e(t('f_apply')) ?> <span class="req">*</span></label><textarea name="how_to_apply" required data-min="10" placeholder="<?= e(t('f_apply_ph')) ?>"><?= $val('how_to_apply') ?></textarea></div>
         <div class="field"><label><?= e(t('f_applyurl')) ?> <span class="hint"><?= e(t('f_applyurl_hint')) ?></span></label><input type="url" name="apply_url" value="<?= $val('apply_url') ?>" placeholder="https://" dir="ltr"></div>
 
         <span class="eyebrow" style="margin:1.5rem 0 0.5rem"><?= e(t('f_ar_section')) ?></span>

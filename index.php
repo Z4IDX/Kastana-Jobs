@@ -307,8 +307,25 @@ require __DIR__ . '/includes/header.php';
     </form>
   </div>
 
+<?php
+  // Active-filter pills, each links to the same board with that one filter removed.
+  $activeFilters = [];
+  if ($q !== '')                              $activeFilters[] = ['label' => '“' . $q . '”', 'url' => query_url(['q' => null, 'page' => null])];
+  if ($categorySlug !== 'all' && $categorySlug !== '') {
+      $cn = $categorySlug;
+      foreach ($categories as $ct) { if ($ct['slug'] === $categorySlug) { $cn = cat_name($ct['name'], $ct['name_ar']); break; } }
+      $activeFilters[] = ['label' => $cn, 'url' => query_url(['category' => null, 'page' => null])];
+  }
+  if ($jobType !== 'all')                     $activeFilters[] = ['label' => job_type_label($jobType), 'url' => query_url(['type' => null, 'page' => null])];
+  if ($location !== '' && $location !== 'all')$activeFilters[] = ['label' => $location, 'url' => query_url(['loc' => null, 'page' => null])];
+  if ($datePosted !== 'all')                  $activeFilters[] = ['label' => t('date_' . $datePosted), 'url' => query_url(['date' => null, 'page' => null])];
+  if ($salaryShown)                           $activeFilters[] = ['label' => t('filter_salary_shown'), 'url' => query_url(['salary' => null, 'page' => null])];
+?>
   <div class="board__meta">
     <span class="board__count"><?= e(t('results_count', $totalJobsFiltered)) ?></span>
+    <?php foreach ($activeFilters as $af): ?>
+      <a class="chip chip--filter" href="<?= e($af['url']) ?>#roles" title="<?= e(t('clear_filters')) ?>"><?= e($af['label']) ?> <span aria-hidden="true">✕</span></a>
+    <?php endforeach; ?>
     <?php if ($filtersActive): ?>
       <a class="chip chip--clear" href="<?= url('index.php') ?>#roles"><?= e(t('clear_filters')) ?></a>
     <?php endif; ?>
