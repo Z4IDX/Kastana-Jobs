@@ -251,13 +251,17 @@ function toggle_saved_job(int $jobId, bool $save): void
     $ids = saved_job_ids();
     $ids = $save ? array_unique(array_merge($ids, [$jobId])) : array_diff($ids, [$jobId]);
     $ids = array_slice(array_values($ids), -200); // cap growth
-    setcookie(SAVED_JOBS_COOKIE, implode(',', $ids), [
+    $val = implode(',', $ids);
+    setcookie(SAVED_JOBS_COOKIE, $val, [
         'expires'  => time() + 60 * 60 * 24 * 180,
         'path'     => rtrim(BASE_URL, '/') . '/',
         'secure'   => USE_HTTPS,
         'httponly' => true,
         'samesite' => 'Lax',
     ]);
+    // setcookie() doesn't update $_COOKIE this request; sync it so is_job_saved()/
+    // saved_job_ids() reflect the new state immediately (needed by the AJAX save response).
+    $_COOKIE[SAVED_JOBS_COOKIE] = $val;
 }
 
 /* ---------- Employer notifications (on-site, no email) ---------- */

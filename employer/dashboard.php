@@ -3,6 +3,24 @@ require_once __DIR__ . '/../config/config.php';
 require_employer();
 
 $empId = current_employer_id();
+
+// Delete one of the employer's own postings.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && input($_POST, 'action') === 'delete') {
+    require_csrf();
+    $jid = filter_input(INPUT_POST, 'job_id', FILTER_VALIDATE_INT);
+    if ($jid) {
+        $row = db()->prepare("SELECT image_path, thumbnail_path FROM jobs WHERE id=? AND employer_id=?");
+        $row->execute([$jid, $empId]);
+        if ($r = $row->fetch()) {
+            delete_uploaded_image($r['image_path'] ?: null);
+            delete_uploaded_image($r['thumbnail_path'] ?: null);
+            db()->prepare("DELETE FROM jobs WHERE id=? AND employer_id=?")->execute([$jid, $empId]);
+            flash_set('success', t('emp_deleted_ok'));
+        }
+    }
+    redirect('employer/dashboard.php');
+}
+
 $stmt = db()->prepare(
     "SELECT j.*, c.name AS category_name, c.name_ar AS category_name_ar
      FROM jobs j LEFT JOIN categories c ON c.id = j.category_id
@@ -49,6 +67,7 @@ $statusLabel = function (array $j): array {
     </div>
     <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap">
       <a href="<?= url('employer/post-job.php') ?>" class="btn btn--primary btn--sm">+ <?= e(t('emp_new_posting')) ?></a>
+      <a href="<?= url('employer/account.php') ?>" class="btn btn--ghost btn--sm"><?= e(t('emp_account')) ?></a>
       <a href="<?= url('employer/logout.php') ?>" class="btn btn--ghost btn--sm"><?= e(t('emp_logout')) ?></a>
     </div>
   </div>
@@ -79,10 +98,16 @@ $statusLabel = function (array $j): array {
           <?php if ($salary): ?><span class="tag tag--salary"><?= e($salary) ?></span><?php endif; ?>
         </div>
         <div class="job-card__foot">
-          <?php if ($job['status'] === 'approved'): ?>
-            <a class="tag" href="<?= url('job.php?id=' . $job['id']) ?>" target="_blank"><?= e(t('view_role')) ?> ↗</a>
-          <?php else: ?><span></span><?php endif; ?>
-          <a class="job-card__link" href="<?= url('employer/post-job.php?id=' . $job['id']) ?>"><?= e(t('emp_edit')) ?> <span class="dir-arrow">→</span></a>
+          <form method="post" data-confirm="<?= e(t('emp_confirm_delete')) ?>" style="margin:0">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="job_id" value="<?= (int)$job['id'] ?>">
+            <button type="submit" class="tag" style="border:none;cursor:pointer;background:var(--red-bg,#fbeaea);color:var(--red,#c0392b)"><?= e(t('emp_delete')) ?></button>
+          </form>
+          <span style="display:flex;gap:0.8rem;align-items:center">
+            <?php if ($job['status'] === 'approved'): ?><a class="tag" href="<?= url('job.php?id=' . $job['id']) ?>" target="_blank"><?= e(t('view_role')) ?> ↗</a><?php endif; ?>
+            <a class="job-card__link" href="<?= url('employer/post-job.php?id=' . $job['id']) ?>"><?= e(t('emp_edit')) ?> <span class="dir-arrow">→</span></a>
+          </span>
         </div>
       </article>
     <?php endforeach; ?>

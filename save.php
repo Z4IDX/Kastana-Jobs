@@ -8,6 +8,19 @@ $jobId = filter_input(INPUT_POST, 'job_id', FILTER_VALIDATE_INT);
 $act = input($_POST, 'save_action');
 if ($jobId) toggle_saved_job($jobId, $act !== 'unsave');
 
+// AJAX (progressive enhancement): return JSON instead of redirecting, so the star
+// toggles in place without a full page reload. Falls back to the redirect below.
+$isAjax = (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest');
+if ($isAjax) {
+    header('Content-Type: application/json');
+    echo json_encode([
+        'ok'    => true,
+        'saved' => $jobId ? is_job_saved($jobId) : false,
+        'count' => count(saved_job_ids()),
+    ]);
+    exit;
+}
+
 // return_url is the visitor's current page (already a full site path, e.g. "/kastana-jobs/index.php?...").
 // Validate it strictly (relative path only, .php extension, no scheme/host) to prevent open redirects,
 // then send the Location header directly rather than through url() to avoid double-prefixing BASE_URL.

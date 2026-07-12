@@ -72,22 +72,23 @@ $counts = db()->query(
      FROM jobs"
 )->fetch();
 
-if ($tab === 'all') {
-    $stmt = db()->query(
-        "SELECT j.*, c.name AS category_name
-         FROM jobs j
-         LEFT JOIN categories c ON c.id=j.category_id
-         ORDER BY FIELD(j.status,'pending','approved','rejected'), j.created_at DESC"
-    );
-} else {
-    $stmt = db()->prepare(
-        "SELECT j.*, c.name AS category_name
-         FROM jobs j
-         LEFT JOIN categories c ON c.id=j.category_id
-         WHERE j.status=? ORDER BY j.created_at DESC"
-    );
-    $stmt->execute([$tab]);
+$search = trim(input($_GET, 'q'));
+$conds = [];
+$qp = [];
+if ($tab !== 'all') { $conds[] = "j.status = ?"; $qp[] = $tab; }
+if ($search !== '') {
+    $conds[] = "(j.title LIKE ? OR j.company_name LIKE ? OR j.company_email LIKE ?)";
+    $s = '%' . $search . '%';
+    array_push($qp, $s, $s, $s);
 }
+$whereSql = $conds ? 'WHERE ' . implode(' AND ', $conds) : '';
+$orderSql = $tab === 'all' ? "FIELD(j.status,'pending','approved','rejected'), j.created_at DESC" : "j.created_at DESC";
+$stmt = db()->prepare(
+    "SELECT j.*, c.name AS category_name
+     FROM jobs j LEFT JOIN categories c ON c.id=j.category_id
+     $whereSql ORDER BY $orderSql"
+);
+$stmt->execute($qp);
 $jobs = $stmt->fetchAll();
 
 $admin_title = t('a_dashboard');
@@ -130,6 +131,13 @@ $statusLabels = ['pending' => t('ad_tab_pending'), 'approved' => t('ad_tab_publi
   <?php endforeach; ?>
 </nav>
 
+<form method="get" action="<?= url('admin/dashboard.php') ?>" style="display:flex;gap:0.5rem;max-width:440px;margin-bottom:1.2rem">
+  <input type="hidden" name="tab" value="<?= e($tab) ?>">
+  <input type="search" name="q" value="<?= e($search) ?>" placeholder="<?= e(t('ad_search_ph')) ?>" style="flex:1;padding:0.5rem 0.9rem;border:1px solid var(--line-strong);border-radius:999px;font:inherit">
+  <button class="btn btn--ghost btn--sm"><?= e(t('search_btn')) ?></button>
+  <?php if ($search !== ''): ?><a class="btn btn--ghost btn--sm" href="<?= url('admin/dashboard.php?tab=' . e($tab)) ?>">✕</a><?php endif; ?>
+</form>
+
 <div class="job-list">
   <?php if (empty($jobs)): ?>
     <div class="empty">
@@ -159,6 +167,7 @@ $statusLabels = ['pending' => t('ad_tab_pending'), 'approved' => t('ad_tab_publi
           <?php if ($job['category_name']): ?><span class="pill"><?= e($job['category_name']) ?></span><?php endif; ?>
           <?php if ($salary): ?><span class="pill"><?= e($salary) ?></span><?php endif; ?>
           <span class="pill"><?= e(t('posted')) ?> <?= e(time_ago($job['created_at'])) ?></span>
+          <span class="pill">👁 <?= (int)$job['views'] ?></span>
         </div>
       </div>
 

@@ -35,8 +35,10 @@ DirectoryIndex index.php
 </IfModule>
 
 # ---- Custom error pages fall back to the app ----
-ErrorDocument 403 /kastana-jobs/index.php
-ErrorDocument 404 /kastana-jobs/index.php
+# These paths must match BASE_URL. Root install (kastana.test, BASE_URL=''): "/404.php".
+# Sub-folder install (localhost/kastana-jobs, BASE_URL='/kastana-jobs'): prefix with "/kastana-jobs".
+ErrorDocument 403 /index.php
+ErrorDocument 404 /404.php
 
 # ---- Force UTF-8 ----
 AddDefaultCharset UTF-8
