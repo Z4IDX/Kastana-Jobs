@@ -14,6 +14,27 @@ $__savedCount = count(saved_job_ids());
   <meta name="description" content="<?= e($page_desc ?? APP_NAME . ' — ' . APP_TAGLINE) ?>">
   <title><?= e(($page_title ?? t('nav_browse')) . ' · ' . APP_NAME) ?></title>
 
+  <?php
+    $__scheme = (defined('USE_HTTPS') && USE_HTTPS) ? 'https' : 'http';
+    $__host = $_SERVER['HTTP_HOST'] ?? '';
+    $__canonical = $canonical ?? ($__scheme . '://' . $__host . ($_SERVER['REQUEST_URI'] ?? '/'));
+    $__ogImage = $og_image ?? ($__scheme . '://' . $__host . url('assets/img/logo.png'));
+    $__ogTitle = ($page_title ?? t('nav_browse')) . ' · ' . APP_NAME;
+    $__ogDesc = $page_desc ?? (APP_NAME . ' — ' . APP_TAGLINE);
+  ?>
+  <link rel="canonical" href="<?= e($__canonical) ?>">
+  <meta property="og:site_name" content="<?= e(APP_NAME) ?>">
+  <meta property="og:type" content="<?= e($og_type ?? 'website') ?>">
+  <meta property="og:title" content="<?= e($__ogTitle) ?>">
+  <meta property="og:description" content="<?= e($__ogDesc) ?>">
+  <meta property="og:url" content="<?= e($__canonical) ?>">
+  <meta property="og:image" content="<?= e($__ogImage) ?>">
+  <meta property="og:locale" content="<?= e(current_lang() === 'ar' ? 'ar_AR' : 'en_US') ?>">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="<?= e($__ogTitle) ?>">
+  <meta name="twitter:description" content="<?= e($__ogDesc) ?>">
+  <meta name="twitter:image" content="<?= e($__ogImage) ?>">
+
   <link rel="icon" type="image/svg+xml" href="<?= url('assets/img/favicon.svg') ?>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

@@ -60,8 +60,37 @@ $similarJobs = $simStmt->fetchAll();
 
 $page_title = $title . ' — ' . $job['company_name'];
 $page_desc  = $title . ' · ' . $job['company_name'] . ' · ' . $loc;
+$canonical  = $absUrl;
+$og_image   = $thumb ? ($scheme . '://' . ($_SERVER['HTTP_HOST'] ?? '') . url($thumb)) : null;
+
+// Google-for-Jobs JobPosting structured data.
+$empMap = ['Full-time' => 'FULL_TIME', 'Part-time' => 'PART_TIME', 'Contract' => 'CONTRACTOR', 'Internship' => 'INTERN', 'Temporary' => 'TEMPORARY', 'Remote' => 'OTHER'];
+$ld = [
+    '@context'    => 'https://schema.org/',
+    '@type'       => 'JobPosting',
+    'title'       => $title,
+    'description' => nl2br(e(job_field($job, 'description'))),
+    'datePosted'  => date('Y-m-d', strtotime($job['created_at'])),
+    'employmentType' => $empMap[$job['job_type']] ?? 'OTHER',
+    'hiringOrganization' => ['@type' => 'Organization', 'name' => $job['company_name']],
+    'jobLocation' => ['@type' => 'Place', 'address' => ['@type' => 'PostalAddress', 'addressLocality' => $loc]],
+    'identifier'  => ['@type' => 'PropertyValue', 'name' => $job['company_name'], 'value' => (string) $job['id']],
+];
+if ($job['job_type'] === 'Remote')       $ld['jobLocationType'] = 'TELECOMMUTE';
+if (!empty($job['expires_at']))          $ld['validThrough'] = date('Y-m-d', strtotime($job['expires_at']));
+if (!empty($job['company_website']))     $ld['hiringOrganization']['sameAs'] = $job['company_website'];
+if ($og_image)                           $ld['hiringOrganization']['logo'] = $og_image;
+if (!empty($job['apply_url']))           $ld['directApply'] = true;
+if ($job['salary_min'] || $job['salary_max']) {
+    $qv = ['@type' => 'QuantitativeValue', 'unitText' => 'MONTH'];
+    if ($job['salary_min']) $qv['minValue'] = (float) $job['salary_min'];
+    if ($job['salary_max']) $qv['maxValue'] = (float) $job['salary_max'];
+    $ld['baseSalary'] = ['@type' => 'MonetaryAmount', 'currency' => $job['salary_currency'] ?: 'USD', 'value' => $qv];
+}
+
 require __DIR__ . '/includes/header.php';
 ?>
+<script type="application/ld+json"><?= json_encode($ld, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
 
 <section class="wrap job-detail">
   <a class="back-link" href="<?= url('index.php') ?>"><span class="dir-arrow">←</span> <?= e(t('back_all')) ?></a>
