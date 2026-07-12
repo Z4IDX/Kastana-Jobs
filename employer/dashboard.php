@@ -4,6 +4,10 @@ require_employer();
 
 $empId = current_employer_id();
 
+$st = db()->prepare("SELECT status FROM employers WHERE id = ?");
+$st->execute([$empId]);
+$empStatus = $st->fetchColumn() ?: 'pending';
+
 // Delete one of the employer's own postings.
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && input($_POST, 'action') === 'delete') {
     require_csrf();
@@ -47,6 +51,9 @@ $statusLabel = function (array $j): array {
     };
 };
 ?>
+<?php if ($empStatus !== 'active'): ?>
+<div class="wrap" style="margin-top:1.5rem"><div class="alert alert--info"><?= e(t('emp_pending_banner')) ?></div></div>
+<?php endif; ?>
 <?php if ($notifs): ?>
 <div class="toast-stack" id="toast-stack" aria-live="polite">
   <?php foreach ($notifs as $n): $ok = $n['type'] === 'approved'; ?>

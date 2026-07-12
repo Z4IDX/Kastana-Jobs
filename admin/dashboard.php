@@ -167,7 +167,6 @@ $statusLabels = ['pending' => t('ad_tab_pending'), 'approved' => t('ad_tab_publi
           <?php if ($job['category_name']): ?><span class="pill"><?= e($job['category_name']) ?></span><?php endif; ?>
           <?php if ($salary): ?><span class="pill"><?= e($salary) ?></span><?php endif; ?>
           <span class="pill"><?= e(t('posted')) ?> <?= e(time_ago($job['created_at'])) ?></span>
-          <span class="pill">👁 <?= (int)$job['views'] ?></span>
         </div>
       </div>
 

@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS `employers` (
   `password_hash` VARCHAR(255) NOT NULL,
   `phone`         VARCHAR(40)  NULL DEFAULT NULL,
   `website`       VARCHAR(255) NULL DEFAULT NULL,
-  `status`        ENUM('active','suspended') NOT NULL DEFAULT 'active',
+  `status`        ENUM('pending','active','suspended') NOT NULL DEFAULT 'active',
   `last_login`    DATETIME     NULL DEFAULT NULL,
   `created_at`    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),

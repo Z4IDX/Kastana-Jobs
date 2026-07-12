@@ -19,7 +19,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $old['email'] = input($_POST, 'email');
         $password = (string) ($_POST['password'] ?? '');
 
-        $stmt = db()->prepare("SELECT * FROM employers WHERE email = ? AND status = 'active' LIMIT 1");
+        // 'pending' accounts can sign in (to see their dashboard) but can't post; 'suspended' cannot sign in.
+        $stmt = db()->prepare("SELECT * FROM employers WHERE email = ? AND status IN ('active','pending') LIMIT 1");
         $stmt->execute([$old['email']]);
         $employer = $stmt->fetch();
 

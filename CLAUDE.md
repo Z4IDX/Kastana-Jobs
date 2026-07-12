@@ -53,6 +53,7 @@ config/
   migration_single_site.sql  Multi-tenant -> single-site: drops tenants/tenant_id/applicants, adds
                      employers + jobs.employer_id + company_phone, simplifies admins.
   migration_notifications.sql  Creates the notifications table (employer approval alerts).
+  migration_account_verification.sql  Adds 'pending' to employers.status (admin-approved sign-ups).
   migration_*.sql    Older base migrations (arabic/uploads/expiry/thumbnails/activity_log) for pre-those installs.
   .htaccess          Deny-all (folder not web-accessible).
 
@@ -82,6 +83,7 @@ admin/
   categories.php     Category list + delete (job counts shown; FK sets jobs.category_id NULL).
   category-form.php  Create/edit a category (auto slug via slugify + collision suffix).
   account.php        Change admin password.
+  employers.php      Employer-account verification: approve pending sign-ups, suspend/reactivate (logged).
   includes/admin-header.php   Calls require_login(); admin <head> + top bar (Categories/Activity log links).
   includes/admin-footer.php   + admin.js.
 
@@ -101,7 +103,7 @@ uploads/             User-uploaded images. .htaccess disables code execution her
 
 ## Database (`kastana_jobs`, utf8mb4)
 - **admins** (platform staff): id, username (uniq), email (uniq), password_hash (bcrypt), last_login, created_at.
-- **employers** (self-registered posters, kept separate from admins on purpose): id, company_name, email (uniq), password_hash (bcrypt), phone, website, status (active/suspended), last_login, created_at.
+- **employers** (self-registered posters, kept separate from admins on purpose): id, company_name, email (uniq), password_hash (bcrypt), phone, website, status (**pending/active/suspended** — new sign-ups start `pending` and can log in but cannot post until an admin approves them in `admin/employers.php`), last_login, created_at.
 - **categories**: id, name, name_ar, slug (uniq), created_at.
 - **jobs**: id, employer_id (FK→employers, NULL on delete = admin-created), title, title_ar, slug, company_name, company_email,
   company_phone (shown so applicants can call), company_website,

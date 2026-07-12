@@ -110,7 +110,6 @@ require __DIR__ . '/includes/header.php';
         <?php if ($job['category_name']): ?><span class="tag"><?= e(cat_name($job['category_name'], $job['category_name_ar'])) ?></span><?php endif; ?>
         <?php if ($salary): ?><span class="tag tag--salary"><?= e($salary) ?></span><?php endif; ?>
         <span class="tag"><?= e(t('posted')) ?> <?= e(time_ago($job['created_at'])) ?></span>
-        <span class="tag"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg><?= e(t('views_count', (int) $job['views'])) ?></span>
       </div>
 
       <div class="prose">

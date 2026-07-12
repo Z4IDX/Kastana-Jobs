@@ -32,9 +32,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($chk->fetch()) {
             $errors[] = t('err_emp_email_taken');
         } else {
+            // New accounts start 'pending' — an admin verifies them before they can post.
             db()->prepare(
-                "INSERT INTO employers (company_name, email, password_hash, phone, website)
-                 VALUES (?,?,?,?,?)"
+                "INSERT INTO employers (company_name, email, password_hash, phone, website, status)
+                 VALUES (?,?,?,?,?,'pending')"
             )->execute([
                 $old['company_name'], $old['email'],
                 password_hash($pass, PASSWORD_BCRYPT, ['cost' => 12]),
@@ -42,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
             $id = (int) db()->lastInsertId();
             login_employer(['id' => $id, 'company_name' => $old['company_name']]);
-            flash_set('success', t('emp_saved_ok'));
+            flash_set('info', t('emp_pending_notice'));
             redirect('employer/dashboard.php');
         }
     }

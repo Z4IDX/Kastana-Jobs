@@ -26,6 +26,7 @@ require_login(); // every admin page is guarded
       <span class="who"><?= e($_SESSION['admin_username'] ?? '') ?></span>
       <a href="<?= url('admin/dashboard.php') ?>" class="linkout"><?= e(t('a_dashboard')) ?></a>
       <a href="<?= url('admin/categories.php') ?>" class="linkout"><?= e(t('a_categories')) ?></a>
+      <a href="<?= url('admin/employers.php') ?>" class="linkout"><?= e(t('a_accounts')) ?></a>
       <a href="<?= url('admin/activity-log.php') ?>" class="linkout"><?= e(t('a_activity')) ?></a>
       <a href="<?= url('admin/account.php') ?>" class="linkout"><?= e(t('a_account')) ?></a>
       <a href="<?= url('index.php') ?>" target="_blank" class="linkout"><?= e(t('a_viewsite')) ?> ↗</a>

@@ -3,6 +3,15 @@ require_once __DIR__ . '/../config/config.php';
 require_employer();
 
 $empId = current_employer_id();
+
+// Unverified (pending) accounts can reach their dashboard but cannot post until an admin approves them.
+$st = db()->prepare("SELECT status FROM employers WHERE id = ?");
+$st->execute([$empId]);
+if (($st->fetchColumn() ?: 'pending') !== 'active') {
+    flash_set('info', t('emp_pending_block'));
+    redirect('employer/dashboard.php');
+}
+
 $categories = db()->query("SELECT id, name, name_ar FROM categories ORDER BY name")->fetchAll();
 $allowedTypes = ['Full-time','Part-time','Contract','Internship','Remote','Temporary'];
 
