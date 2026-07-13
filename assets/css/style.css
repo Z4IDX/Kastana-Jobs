@@ -503,7 +503,7 @@ a, button, select, input, textarea, label, .chip {
 }
 
 /* ---- Sort control (flat pill select) ---- */
-.sort-form { display: inline-flex; align-items: center; gap: 0.6rem; flex-shrink: 0; }
+.sort-form { display: inline-flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
 .sort-form label {
   font-family: var(--font-mono);
   font-size: 0.66rem;
@@ -967,6 +967,11 @@ a, button, select, input, textarea, label, .chip {
   .board__head { align-items: flex-start; }
   /* 16px min stops iOS Safari from auto-zooming when a field gains focus */
   .field input, .field select, .field textarea { font-size: 16px; }
+  /* Filter bar: stack full-width and let the selects wrap ~2 per row */
+  .board__toolbar { flex-direction: column; align-items: stretch; }
+  .sort-form { width: 100%; }
+  .sort-form .sort-select { flex: 1 1 42%; }
+  .sort-form .sort-select select { width: 100%; }
 }
 
 /* ---------- Reduced motion ---------- */
