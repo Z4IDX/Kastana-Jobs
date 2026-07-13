@@ -4,10 +4,14 @@ require_employer();
 
 $empId = current_employer_id();
 
-// Unverified (pending) accounts can reach their dashboard but cannot post until an admin approves them.
+$mode = moderation_mode();
+$approveCompanies = in_array($mode, ['both', 'companies'], true);
+$approveJobs = in_array($mode, ['both', 'jobs'], true);
+
+// When companies are moderated, unverified accounts can't post until an admin approves them.
 $st = db()->prepare("SELECT status FROM employers WHERE id = ?");
 $st->execute([$empId]);
-if (($st->fetchColumn() ?: 'pending') !== 'active') {
+if ($approveCompanies && ($st->fetchColumn() ?: 'pending') !== 'active') {
     flash_set('info', t('emp_pending_block'));
     redirect('employer/dashboard.php');
 }
@@ -100,15 +104,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $finalImage, $finalThumb,
         ];
 
+        // When jobs are moderated, postings enter the review queue; otherwise they publish immediately.
+        $jobStatus = $approveJobs ? 'pending' : 'approved';
+        $approvedAt = $approveJobs ? null : date('Y-m-d H:i:s');
+
         if ($isEdit) {
-            // Any edit returns the posting to the review queue.
             db()->prepare(
                 "UPDATE jobs SET title=?, title_ar=?, company_name=?, company_email=?, company_phone=?, company_website=?,
                  location=?, location_ar=?, job_type=?, category_id=?, salary_min=?, salary_max=?, salary_currency=?,
                  description=?, description_ar=?, requirements=?, requirements_ar=?, how_to_apply=?, how_to_apply_ar=?, apply_url=?,
-                 image_path=?, thumbnail_path=?, status='pending', approved_at=NULL, approved_by=NULL
+                 image_path=?, thumbnail_path=?, status=?, approved_at=?, approved_by=NULL
                  WHERE id=? AND employer_id=?"
-            )->execute([...$vals, $id, $empId]);
+            )->execute([...$vals, $jobStatus, $approvedAt, $id, $empId]);
         } else {
             $slug = slugify($job['title']) . '-' . substr(bin2hex(random_bytes(3)), 0, 5);
             db()->prepare(
@@ -116,8 +123,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                  (employer_id, title, title_ar, slug, company_name, company_email, company_phone, company_website,
                   location, location_ar, job_type, category_id, salary_min, salary_max, salary_currency,
                   description, description_ar, requirements, requirements_ar, how_to_apply, how_to_apply_ar, apply_url,
-                  image_path, thumbnail_path, status)
-                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'pending')"
+                  image_path, thumbnail_path, status, approved_at)
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
             )->execute([
                 $empId, $job['title'], $job['title_ar'] ?: null, $slug,
                 $job['company_name'], $job['company_email'], $job['company_phone'] ?: null, $job['company_website'] ?: null,
@@ -125,10 +132,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $salaryMin, $salaryMax, $job['salary_currency'],
                 $job['description'], $job['description_ar'] ?: null, $job['requirements'] ?: null, $job['requirements_ar'] ?: null,
                 $job['how_to_apply'], $job['how_to_apply_ar'] ?: null, $job['apply_url'] ?: null,
-                $finalImage, $finalThumb,
+                $finalImage, $finalThumb, $jobStatus, $approvedAt,
             ]);
         }
-        flash_set('success', t('emp_saved_ok'));
+        flash_set('success', $approveJobs ? t('emp_saved_ok') : t('emp_saved_live'));
         redirect('employer/dashboard.php');
     }
 }

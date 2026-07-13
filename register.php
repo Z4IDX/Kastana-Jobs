@@ -32,18 +32,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($chk->fetch()) {
             $errors[] = t('err_emp_email_taken');
         } else {
-            // New accounts start 'pending' — an admin verifies them before they can post.
+            // Company approval depends on the admin's moderation mode. When companies are
+            // moderated, new accounts start 'pending'; otherwise they're active immediately.
+            $approveCompanies = in_array(moderation_mode(), ['both', 'companies'], true);
+            $newStatus = $approveCompanies ? 'pending' : 'active';
             db()->prepare(
                 "INSERT INTO employers (company_name, email, password_hash, phone, website, status)
-                 VALUES (?,?,?,?,?,'pending')"
+                 VALUES (?,?,?,?,?,?)"
             )->execute([
                 $old['company_name'], $old['email'],
                 password_hash($pass, PASSWORD_BCRYPT, ['cost' => 12]),
-                $old['phone'] ?: null, $old['website'] ?: null,
+                $old['phone'] ?: null, $old['website'] ?: null, $newStatus,
             ]);
             $id = (int) db()->lastInsertId();
             login_employer(['id' => $id, 'company_name' => $old['company_name']]);
-            flash_set('info', t('emp_pending_notice'));
+            flash_set('info', $approveCompanies ? t('emp_pending_notice') : t('emp_welcome'));
             redirect('employer/dashboard.php');
         }
     }

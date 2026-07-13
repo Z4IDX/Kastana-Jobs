@@ -297,6 +297,35 @@ function log_activity(?int $jobId, string $action, ?string $details = null): voi
         ->execute([current_admin_id() ?: null, $jobId, $action, $details]);
 }
 
+/* ---------- Settings (key/value) ---------- */
+
+/** Read a setting (cached per request). Degrades to $default if the table isn't migrated yet. */
+function get_setting(string $key, string $default = ''): string
+{
+    static $cache = null;
+    if ($cache === null) {
+        $cache = [];
+        try {
+            foreach (db()->query("SELECT k, v FROM settings")->fetchAll() as $r) { $cache[$r['k']] = $r['v']; }
+        } catch (\PDOException $e) { /* settings table not present yet */ }
+    }
+    return $cache[$key] ?? $default;
+}
+
+/** Persist a setting (upsert). */
+function set_setting(string $key, string $value): void
+{
+    db()->prepare("INSERT INTO settings (k, v) VALUES (?, ?) ON DUPLICATE KEY UPDATE v = VALUES(v)")
+        ->execute([$key, $value]);
+}
+
+/** Moderation mode: which new items need admin approval before going live. */
+function moderation_mode(): string
+{
+    $m = get_setting('moderation_mode', 'both');
+    return in_array($m, ['both', 'companies', 'jobs'], true) ? $m : 'both';
+}
+
 /* ---------- Formatting ---------- */
 
 /** Human-friendly salary range, or null if none set. */

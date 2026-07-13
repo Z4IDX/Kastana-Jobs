@@ -152,9 +152,17 @@ CREATE TABLE IF NOT EXISTS `notifications` (
   CONSTRAINT `fk_notif_job` FOREIGN KEY (`job_id`) REFERENCES `jobs` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS `settings` (
+  `k` VARCHAR(50)  NOT NULL,
+  `v` VARCHAR(255) NOT NULL,
+  PRIMARY KEY (`k`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ------------------------------------------------------------
 --  Seed data
 -- ------------------------------------------------------------
+INSERT INTO `settings` (`k`, `v`) VALUES ('moderation_mode', 'both');
+
 INSERT INTO `categories` (`name`, `name_ar`, `slug`) VALUES
   ('Engineering & Development', 'الهندسة والتطوير',   'engineering'),
   ('Design & Creative',         'التصميم والإبداع',   'design'),

@@ -54,6 +54,7 @@ config/
                      employers + jobs.employer_id + company_phone, simplifies admins.
   migration_notifications.sql  Creates the notifications table (employer approval alerts).
   migration_account_verification.sql  Adds 'pending' to employers.status (admin-approved sign-ups).
+  migration_settings.sql  Creates the settings table + seeds moderation_mode.
   migration_*.sql    Older base migrations (arabic/uploads/expiry/thumbnails/activity_log) for pre-those installs.
   .htaccess          Deny-all (folder not web-accessible).
 
@@ -116,6 +117,7 @@ uploads/             User-uploaded images. .htaccess disables code execution her
 - **activity_log**: id, admin_id (FK→admins, NULL on delete), job_id (FK→jobs, NULL on delete),
   action, details (snapshot label, survives job deletion), created_at.
 - **notifications**: id, employer_id (FK→employers, CASCADE), job_id (FK→jobs, NULL on delete), type (approved/rejected), title (snapshot), is_read, created_at. Written by notify_employer(); shown/cleared on employer/dashboard.php via unread_notifications()/mark_notifications_read().
+- **settings**: k (PK), v. Key/value store. Holds `moderation_mode` (**both/companies/jobs**) — set from the toggle on `admin/dashboard.php` via `moderation_mode()`/`get_setting()`/`set_setting()`. Controls whether new employer accounts and/or new jobs require admin approval before going live (companies→jobs auto-publish once the account is approved; jobs→accounts auto-activate but each posting is reviewed; both→current default).
 
 Seed: 8 bilingual categories, 1 admin, 2 approved bilingual sample jobs.
 

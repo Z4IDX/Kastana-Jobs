@@ -6,6 +6,17 @@ require_login();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_csrf();
     $action = input($_POST, 'action');
+
+    if ($action === 'set_moderation') {
+        $m = input($_POST, 'mode');
+        if (in_array($m, ['both', 'companies', 'jobs'], true)) {
+            set_setting('moderation_mode', $m);
+            log_activity(null, 'set_moderation', 'Approval mode: ' . $m);
+            flash_set('success', t('ad_mod_saved'));
+        }
+        redirect('admin/dashboard.php');
+    }
+
     $jobId  = filter_input(INPUT_POST, 'job_id', FILTER_VALIDATE_INT);
 
     if ($jobId) {
@@ -72,6 +83,9 @@ $counts = db()->query(
      FROM jobs"
 )->fetch();
 
+$mode = moderation_mode();
+$pendingCompanies = (int) db()->query("SELECT COUNT(*) FROM employers WHERE status='pending'")->fetchColumn();
+
 $search = trim(input($_GET, 'q'));
 $conds = [];
 $qp = [];
@@ -113,6 +127,24 @@ $statusLabels = ['pending' => t('ad_tab_pending'), 'approved' => t('ad_tab_publi
   <div class="stat is-approved"><b><?= (int)$counts['approved'] ?></b><span><?= e(t('ad_stat_published')) ?></span></div>
   <div class="stat"><b><?= (int)$counts['rejected'] ?></b><span><?= e(t('ad_stat_rejected')) ?></span></div>
   <div class="stat"><b><?= (int)$counts['total'] ?></b><span><?= e(t('ad_stat_total')) ?></span></div>
+</div>
+
+<div class="mod-toggle">
+  <div class="mod-toggle__label">
+    <strong><?= e(t('ad_mod_title')) ?></strong>
+    <span><?= e(t('ad_mod_lede')) ?></span>
+  </div>
+  <div class="mod-toggle__opts">
+    <?php foreach (['companies' => t('ad_mod_companies'), 'jobs' => t('ad_mod_jobs'), 'both' => t('ad_mod_both')] as $mk => $ml): ?>
+      <form method="post" class="inline-form">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="set_moderation">
+        <input type="hidden" name="mode" value="<?= $mk ?>">
+        <button class="mod-btn <?= $mode === $mk ? 'is-active' : '' ?>"<?= $mode === $mk ? ' aria-current="true"' : '' ?>><?= e($ml) ?></button>
+      </form>
+    <?php endforeach; ?>
+  </div>
+  <a class="mod-toggle__link" href="<?= url('admin/employers.php?status=pending') ?>"><?= e(t('ad_mod_pending_co', $pendingCompanies)) ?> →</a>
 </div>
 
 <nav class="tabs">
